@@ -1,0 +1,52 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg15-latest
+    container_name: process-modeler-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: process_modeler
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: process-modeler-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: process-modeler-n8n
+    ports:
+      - "5678:5678"
+    environment:
+      DB_TYPE: postgres
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_USER: postgres
+      DB_POSTGRESDB_PASSWORD: devpassword
+      DB_POSTGRESDB_DATABASE: n8n
+      WEBHOOK_TUNNEL_URL: http://n8n:5678
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n-workflows:/workflows
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+  redis_data:
+  n8n_data:
