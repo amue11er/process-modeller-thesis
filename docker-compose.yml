@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   postgres:
-    image: pgvector/pgvector:pg15-latest
+    image: postgres:15-alpine
     container_name: process-modeler-db
     ports:
       - "5432:5432"
