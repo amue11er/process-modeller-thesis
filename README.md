@@ -13,6 +13,10 @@ Intelligente Automatisierung von Prozessmodellierung für Verwaltungsvorschrifte
 git clone https://github.com/amue11er/process-modeller-thesis.git
 cd process-modeller-thesis
 
+# Create required directories for file access
+mkdir -p ./files
+mkdir -p ./apps/backend/data/archive-uploads
+
 # Run setup script
 ./scripts/setup.sh
 
@@ -20,12 +24,14 @@ cd process-modeller-thesis
 nano .env.local
 # Add: GOOGLE_API_KEY, CLAUDE_API_KEY
 
-# Start services (in separate terminals)
-# Terminal 1: Backend
+# Start Docker services
+docker-compose up -d
+
+# Start backend (in separate terminal)
 cd apps/backend && source venv/bin/activate
 python -m uvicorn main:app --host 0.0.0.0 --port 8000
 
-# Terminal 2: Frontend (Week 2+)
+# Start frontend (Week 2+, in another terminal)
 cd apps/frontend
 streamlit run app.py
 ```
@@ -48,7 +54,18 @@ cp .env.example .env.local
 # - CLAUDE_API_KEY (from Anthropic)
 ```
 
-**Step 2: Start Docker Services**
+**Step 2: Setup Docker Volumes (Required)**
+```bash
+# Create directories for file mounts
+mkdir -p ./files
+mkdir -p ./apps/backend/data/archive-uploads
+
+# These directories are used by n8n workflows to:
+# - /files: Store temporary files and workflow outputs
+# - /archive-uploads: Access uploaded documents from backend
+```
+
+**Step 3: Start Docker Services**
 ```bash
 docker-compose up -d
 
@@ -57,7 +74,7 @@ docker-compose ps
 # You should see: postgres (healthy), redis, n8n (all running)
 ```
 
-**Step 3: Setup Backend**
+**Step 4: Setup Backend**
 ```bash
 cd apps/backend
 
@@ -72,14 +89,14 @@ pip install -r requirements.txt
 python -m uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-**Step 4: Test Backend**
+**Step 5: Test Backend**
 ```bash
 # In a new terminal
 curl http://localhost:8000/health
 # Expected: {"status":"healthy"}
 ```
 
-**Step 5: Start Frontend (Week 2+)**
+**Step 6: Start Frontend (Week 2+)**
 ```bash
 cd apps/frontend
 pip install -r requirements.txt
@@ -93,18 +110,22 @@ streamlit run app.py
 ```
 process-modeller-thesis/
 ├── apps/
-│   ├── backend/           # FastAPI (Port 8000)
+│   ├── backend/                    # FastAPI (Port 8000)
 │   │   ├── main.py
-│   │   └── requirements.txt
-│   └── frontend/          # Streamlit (Port 8501) - Week 2+
-├── services/              # Additional microservices
-├── n8n-workflows/         # n8n workflow definitions
+│   │   ├── requirements.txt
+│   │   └── data/
+│   │       └── archive-uploads/    # Uploaded documents (mounted to n8n)
+│   └── frontend/                   # Streamlit (Port 8501) - Week 2+
+├── services/                       # Additional microservices
+├── n8n-workflows/                  # n8n workflow definitions
 ├── infrastructure/
-│   ├── docker/            # Docker configurations
-│   └── postgres/          # Database schemas
-├── docs/                  # Documentation & thesis
-├── docker-compose.yml     # Docker services (Postgres, Redis, n8n)
-└── .env.example           # Environment template
+│   ├── docker/                     # Docker configurations
+│   └── postgres/                   # Database schemas
+├── files/                          # n8n workflow files (temporary)
+├── docs/                           # Documentation & thesis
+├── docker-compose.yml              # Docker services configuration
+├── .env.example                    # Environment template
+└── .gitignore                      # Git ignore rules
 ```
 
 ---
@@ -113,13 +134,17 @@ process-modeller-thesis/
 
 ### Docker Services (All running in background)
 ```bash
-# Start all
+# Start all services
 docker-compose up -d
 
 # View logs
 docker-compose logs -f
 
-# Stop all
+# View specific service logs
+docker-compose logs -f n8n
+docker-compose logs -f postgres
+
+# Stop all services
 docker-compose down
 
 # Check status
@@ -130,6 +155,23 @@ docker-compose ps
 - **PostgreSQL:** `localhost:5432` (user: postgres, pw: devpassword)
 - **Redis:** `localhost:6379`
 - **n8n:** `http://localhost:5678` (Workflow Orchestration)
+
+### Docker Volume Mounts
+
+The Docker setup automatically mounts these directories:
+
+| Container Path | Host Path | Purpose |
+|---|---|---|
+| `/files` | `./files` | n8n workflow files and outputs |
+| `/archive-uploads` | `./apps/backend/data/archive-uploads` | Uploaded documents |
+| `/home/node/.n8n` | Docker volume `n8n_data` | n8n configuration and data |
+| `/var/lib/postgresql/data` | Docker volume `postgres_data` | PostgreSQL data |
+| `/data` | Docker volume `redis_data` | Redis data |
+
+**n8n File Access:**
+- n8n Read/Write Files Node can access `/files/` for temporary operations
+- n8n can read uploaded documents from `/archive-uploads/`
+- Use file paths like `/files/document.pdf` or `/archive-uploads/col-*/filename.pdf` in workflows
 
 ### Backend
 ```bash
@@ -181,13 +223,21 @@ psql -h localhost -U postgres -d process_modeler
 
 1. Open http://localhost:5678
 2. Create workflows for document processing & analysis
-3. Set up webhooks to communicate with backend
+3. Use Read/Write Files Node to access `/files/` and `/archive-uploads/`
+4. Set up webhooks to communicate with backend
+
+**Example: Reading Uploaded Documents in n8n**
+```
+Read/Write Files Node:
+- Operation: Read File(s) From Disk
+- File(s) Selector: /archive-uploads/*.pdf
+```
 
 ---
 
 ## Project Timeline
 
-- **Week 1:** ✅ Backend Setup, Docker, PostgreSQL
+- **Week 1:** ✅ Backend Setup, Docker, PostgreSQL, n8n File Access
 - **Week 2:** Frontend (Streamlit), First n8n Workflows
 - **Week 3-4:** Core Features (Document Upload, PDF Processing)
 - **Week 5-6:** AI Integration (Gemini, Claude, RAG)
@@ -200,6 +250,31 @@ psql -h localhost -U postgres -d process_modeler
 ---
 
 ## Troubleshooting
+
+### Docker Services Not Starting
+```bash
+# Check Docker is running
+docker --version
+
+# View error logs
+docker-compose logs
+
+# Rebuild images
+docker-compose down
+docker-compose up -d --build
+```
+
+### n8n File Access Errors
+
+**Error: "Access to the file is not allowed"**
+- Ensure directories exist: `mkdir -p ./files ./apps/backend/data/archive-uploads`
+- Restart Docker: `docker-compose down && docker-compose up -d`
+- Check environment variables are set in docker-compose.yml
+
+**File not found in n8n:**
+- Use absolute paths: `/files/filename.pdf` or `/archive-uploads/col-xxx/filename.pdf`
+- Check file exists: `docker exec process-modeler-n8n ls -la /files/`
+- Verify file permissions: `docker exec process-modeler-n8n ls -la /archive-uploads/`
 
 ### PostgreSQL Connection Issues
 ```bash
@@ -238,7 +313,11 @@ The project is fully portable via Docker + Git:
 git clone https://github.com/amue11er/process-modeller-thesis.git
 cd process-modeller-thesis
 
-# Everything starts fresh
+# Create required directories
+mkdir -p ./files
+mkdir -p ./apps/backend/data/archive-uploads
+
+# Start everything
 docker-compose up -d
 cd apps/backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt
 python -m uvicorn main:app --host 0.0.0.0 --port 8000
@@ -256,7 +335,7 @@ Database data is local (development mode) - production would use cloud database.
 | Backend | FastAPI | REST API |
 | Database | PostgreSQL + pgvector | Data storage + vector embeddings |
 | Cache | Redis | Session & temporary data |
-| Orchestration | n8n | Workflow automation |
+| Orchestration | n8n | Workflow automation + document processing |
 | LLMs | Google Gemini, Claude | AI processing |
 | Deployment | Docker Compose | Local development |
 
