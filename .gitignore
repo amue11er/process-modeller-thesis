@@ -1,0 +1,8 @@
+.env
+n8n_data/
+postgres_data/
+redis_data/
+caddy_data/
+portainer_data/
+files/
+.DS_Store

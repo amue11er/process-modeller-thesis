@@ -1,0 +1,9 @@
+# Regel 1: n8n (Hauptadresse)
+209.38.205.46.nip.io {
+    reverse_proxy n8n:5678
+}
+
+# Regel 2: Portainer (Subdomain "admin")
+admin.209.38.205.46.nip.io {
+    reverse_proxy portainer:9000
+}
