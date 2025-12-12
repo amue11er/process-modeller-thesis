@@ -2,370 +2,262 @@
 
 Intelligente Automatisierung von Prozessmodellierung für Verwaltungsvorschriften.
 
-**Status:** Week 1 Complete - Backend & Docker Stack Running ✅
+**Live Demo:** http://209.38.205.46:3000
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
-### Option 1: Automated Setup (Recommended)
+### Lokale Entwicklung (Mac/Linux)
+
 ```bash
 git clone https://github.com/amue11er/process-modeller-thesis.git
 cd process-modeller-thesis
 
-# Create required directories for file access
-mkdir -p ./files
-mkdir -p ./apps/backend/data/archive-uploads
-
-# Run setup script
-./scripts/setup.sh
-
-# Edit environment and add API keys
-nano .env.local
-# Add: GOOGLE_API_KEY, CLAUDE_API_KEY
-
-# Start Docker services
+# Docker Services starten (PostgreSQL, Redis, n8n)
 docker-compose up -d
 
-# Start backend (in separate terminal)
-cd apps/backend && source venv/bin/activate
-python -m uvicorn main:app --host 0.0.0.0 --port 8000
-
-# Start frontend (Week 2+, in another terminal)
-cd apps/frontend
-streamlit run app.py
+# Frontend starten
+cd apps/frontend-react
+npm install
+npm start
+# → http://localhost:3000
 ```
 
-### Option 2: Manual Setup
+### Production Server (Digital Ocean)
 
-**Prerequisites:**
-- Docker & Docker Compose
-- Python 3.12+
-- Git
-
-**Step 1: Clone & Setup Environment**
 ```bash
-git clone https://github.com/amue11er/process-modeller-thesis.git
-cd process-modeller-thesis
+ssh root@209.38.205.46
 
-cp .env.example .env.local
-# Edit .env.local and add your API keys:
-# - GOOGLE_API_KEY (from Google AI Studio)
-# - CLAUDE_API_KEY (from Anthropic)
-```
-
-**Step 2: Setup Docker Volumes (Required)**
-```bash
-# Create directories for file mounts
-mkdir -p ./files
-mkdir -p ./apps/backend/data/archive-uploads
-
-# These directories are used by n8n workflows to:
-# - /files: Store temporary files and workflow outputs
-# - /archive-uploads: Access uploaded documents from backend
-```
-
-**Step 3: Start Docker Services**
-```bash
+cd /opt/process-modeller-thesis
 docker-compose up -d
 
-# Verify all services are running
-docker-compose ps
-# You should see: postgres (healthy), redis, n8n (all running)
-```
-
-**Step 4: Setup Backend**
-```bash
-cd apps/backend
-
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start backend server
-python -m uvicorn main:app --host 0.0.0.0 --port 8000
-```
-
-**Step 5: Test Backend**
-```bash
-# In a new terminal
-curl http://localhost:8000/health
-# Expected: {"status":"healthy"}
-```
-
-**Step 6: Start Frontend (Week 2+)**
-```bash
-cd apps/frontend
-pip install -r requirements.txt
-streamlit run app.py
-# Opens: http://localhost:8501
+cd apps/frontend-react
+HOST=0.0.0.0 npm start
+# → http://209.38.205.46:3000
 ```
 
 ---
 
-## Architecture
+## 🏗️ Architektur
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         INTERNET                             │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼ Port 80/443
+┌─────────────────────────────────────────────────────────────┐
+│                     CADDY (Reverse Proxy)                    │
+│                   209.38.205.46.nip.io                       │
+└─────────────────────────────────────────────────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        ▼                     ▼                     ▼
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│   Frontend   │    │     n8n      │    │  Portainer   │
+│    React     │    │  Workflows   │    │   Docker UI  │
+│  Port 3000   │    │  Port 5678   │    │  Port 9000   │
+└──────────────┘    └──────────────┘    └──────────────┘
+                           │
+                           ▼ Webhooks
+                    ┌──────────────┐
+                    │   Backend    │
+                    │   FastAPI    │
+                    │  Port 8000   │
+                    └──────────────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        ▼                                     ▼
+┌──────────────┐                    ┌──────────────┐
+│  PostgreSQL  │                    │    Redis     │
+│  + pgvector  │                    │    Cache     │
+└──────────────┘                    └──────────────┘
+```
+
+---
+
+## 📦 Services
+
+| Service | Port | URL | Beschreibung |
+|---------|------|-----|--------------|
+| Frontend | 3000 | http://209.38.205.46:3000 | React UI |
+| n8n | 5678 | https://209.38.205.46.nip.io | Workflow Automation |
+| PostgreSQL | 5432 | - | Datenbank + pgvector |
+| Redis | 6379 | - | Cache |
+| Caddy | 80/443 | - | Reverse Proxy, SSL |
+| Portainer | 9000 | - | Docker Management |
+
+---
+
+## 🔄 Development Workflow
+
+### 1. Lokal entwickeln
+
+```bash
+cd ~/dev/process-modeller-thesis
+# Änderungen machen...
+
+# Lokal testen
+cd apps/frontend-react
+npm start
+# → http://localhost:3000
+```
+
+### 2. Änderungen pushen
+
+```bash
+git add .
+git commit -m "feat: beschreibung"
+git push origin main
+```
+
+### 3. Auf Server deployen
+
+```bash
+ssh root@209.38.205.46
+
+cd /opt/process-modeller-thesis
+git pull origin main
+
+# Falls package.json geändert:
+cd apps/frontend-react
+npm install
+
+# Frontend neu starten
+pkill -f "react-scripts"
+HOST=0.0.0.0 npm start
+```
+
+---
+
+## 🖥️ Server Management
+
+### Alle Services starten
+
+```bash
+ssh root@209.38.205.46
+cd /opt/process-modeller-thesis
+
+# Docker Services
+docker-compose up -d
+
+# Frontend (im Hintergrund mit screen)
+screen -S frontend
+cd apps/frontend-react
+HOST=0.0.0.0 npm start
+# Ctrl+A, dann D zum Detachen
+```
+
+### Status prüfen
+
+```bash
+docker ps                      # Docker Container
+screen -r frontend             # Frontend Logs
+netstat -tlnp | grep 3000      # Port Check
+```
+
+### Services neustarten
+
+```bash
+# Docker Services
+docker-compose restart
+
+# Frontend
+pkill -f "react-scripts"
+cd /opt/process-modeller-thesis/apps/frontend-react
+HOST=0.0.0.0 npm start
+```
+
+---
+
+## 🔧 Troubleshooting
+
+### npm install wird "Killed" (Out of Memory)
+
+```bash
+# Swap aktivieren
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
+# Dann nochmal
+rm -rf node_modules package-lock.json
+npm cache clean --force
+npm install
+```
+
+### Port 3000 blockiert
+
+```bash
+# Prozess finden und beenden
+pkill -f "react-scripts"
+# oder
+kill $(lsof -t -i:3000)
+```
+
+### Frontend nicht erreichbar
+
+1. Check ob Prozess läuft: `netstat -tlnp | grep 3000`
+2. Check Digital Ocean Firewall: Port 3000 TCP muss offen sein
+3. Check ob auf 0.0.0.0 gebunden: `HOST=0.0.0.0 npm start`
+
+### Docker Container down
+
+```bash
+docker-compose up -d
+docker ps  # Alle sollten "Up" sein
+```
+
+---
+
+## 🛠️ Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| Frontend | React 19, Tailwind CSS, bpmn-js |
+| Backend | FastAPI (Python) |
+| Database | PostgreSQL + pgvector |
+| Cache | Redis |
+| Workflows | n8n |
+| LLMs | Google Gemini, Claude |
+| Deployment | Docker Compose, Digital Ocean |
+| Reverse Proxy | Caddy (Auto-SSL) |
+
+---
+
+## 📁 Projektstruktur
+
 ```
 process-modeller-thesis/
 ├── apps/
-│   ├── backend/                    # FastAPI (Port 8000)
+│   ├── backend/           # FastAPI Backend
 │   │   ├── main.py
-│   │   ├── requirements.txt
-│   │   └── data/
-│   │       └── archive-uploads/    # Uploaded documents (mounted to n8n)
-│   └── frontend/                   # Streamlit (Port 8501) - Week 2+
-├── services/                       # Additional microservices
-├── n8n-workflows/                  # n8n workflow definitions
-├── infrastructure/
-│   ├── docker/                     # Docker configurations
-│   └── postgres/                   # Database schemas
-├── files/                          # n8n workflow files (temporary)
-├── docs/                           # Documentation & thesis
-├── docker-compose.yml              # Docker services configuration
-├── .env.example                    # Environment template
-└── .gitignore                      # Git ignore rules
+│   │   └── requirements.txt
+│   └── frontend-react/    # React Frontend
+│       ├── src/App.js
+│       └── package.json
+├── docker-compose.yml     # Docker Services
+├── Caddyfile              # Reverse Proxy Config
+└── README.md
 ```
 
 ---
 
-## Running Services
+## 📋 API Endpoints (n8n Webhooks)
 
-### Docker Services (All running in background)
-```bash
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# View specific service logs
-docker-compose logs -f n8n
-docker-compose logs -f postgres
-
-# Stop all services
-docker-compose down
-
-# Check status
-docker-compose ps
-```
-
-**Available Services:**
-- **PostgreSQL:** `localhost:5432` (user: postgres, pw: devpassword)
-- **Redis:** `localhost:6379`
-- **n8n:** `http://localhost:5678` (Workflow Orchestration)
-
-### Docker Volume Mounts
-
-The Docker setup automatically mounts these directories:
-
-| Container Path | Host Path | Purpose |
-|---|---|---|
-| `/files` | `./files` | n8n workflow files and outputs |
-| `/archive-uploads` | `./apps/backend/data/archive-uploads` | Uploaded documents |
-| `/home/node/.n8n` | Docker volume `n8n_data` | n8n configuration and data |
-| `/var/lib/postgresql/data` | Docker volume `postgres_data` | PostgreSQL data |
-| `/data` | Docker volume `redis_data` | Redis data |
-
-**n8n File Access:**
-- n8n Read/Write Files Node can access `/files/` for temporary operations
-- n8n can read uploaded documents from `/archive-uploads/`
-- Use file paths like `/files/document.pdf` or `/archive-uploads/col-*/filename.pdf` in workflows
-
-### Backend
-```bash
-cd apps/backend
-source venv/bin/activate
-python -m uvicorn main:app --host 0.0.0.0 --port 8000
-
-# API Docs: http://localhost:8000/docs
-```
-
-### Frontend
-```bash
-cd apps/frontend
-streamlit run app.py
-# Opens: http://localhost:8501
-```
+| Endpoint | Funktion |
+|----------|----------|
+| `/webhook/extract-activities` | Tätigkeitsliste extrahieren |
+| `/webhook/classify-rag` | FIM-Klassifizierung |
+| `/webhook/generate` | BPMN generieren |
+| `/webhook/archive` | Dokumente abrufen |
+| `/webhook/ingest` | Trainingspaket speichern |
+| `/webhook/delete` | Dokument löschen |
 
 ---
 
-## Development
-
-### Adding Dependencies
-
-**Backend:**
-```bash
-cd apps/backend
-source venv/bin/activate
-pip install new-package
-pip freeze > requirements.txt
-```
-
-**Frontend:**
-```bash
-cd apps/frontend
-pip install new-package
-pip freeze > requirements.txt
-```
-
-### Database Access
-```bash
-# Via Docker
-docker-compose exec postgres psql -U postgres -d process_modeler
-
-# Or with CLI tools (if installed)
-psql -h localhost -U postgres -d process_modeler
-```
-
-### n8n Workflows
-
-1. Open http://localhost:5678
-2. Create workflows for document processing & analysis
-3. Use Read/Write Files Node to access `/files/` and `/archive-uploads/`
-4. Set up webhooks to communicate with backend
-
-**Example: Reading Uploaded Documents in n8n**
-```
-Read/Write Files Node:
-- Operation: Read File(s) From Disk
-- File(s) Selector: /archive-uploads/*.pdf
-```
-
----
-
-## Project Timeline
-
-- **Week 1:** ✅ Backend Setup, Docker, PostgreSQL, n8n File Access
-- **Week 2:** Frontend (Streamlit), First n8n Workflows
-- **Week 3-4:** Core Features (Document Upload, PDF Processing)
-- **Week 5-6:** AI Integration (Gemini, Claude, RAG)
-- **Week 7-8:** BPMN Generation & Validation
-- **Week 9-10:** n8n Orchestration Workflows
-- **Week 11-12:** Frontend Refinement & UX
-- **Week 13-14:** Testing & Quality Assurance
-- **Week 15-16:** Thesis Documentation & Deployment
-
----
-
-## Troubleshooting
-
-### Docker Services Not Starting
-```bash
-# Check Docker is running
-docker --version
-
-# View error logs
-docker-compose logs
-
-# Rebuild images
-docker-compose down
-docker-compose up -d --build
-```
-
-### n8n File Access Errors
-
-**Error: "Access to the file is not allowed"**
-- Ensure directories exist: `mkdir -p ./files ./apps/backend/data/archive-uploads`
-- Restart Docker: `docker-compose down && docker-compose up -d`
-- Check environment variables are set in docker-compose.yml
-
-**File not found in n8n:**
-- Use absolute paths: `/files/filename.pdf` or `/archive-uploads/col-xxx/filename.pdf`
-- Check file exists: `docker exec process-modeler-n8n ls -la /files/`
-- Verify file permissions: `docker exec process-modeler-n8n ls -la /archive-uploads/`
-
-### PostgreSQL Connection Issues
-```bash
-# Check if container is running
-docker-compose ps
-
-# View logs
-docker-compose logs postgres
-
-# Restart
-docker-compose down
-docker-compose up -d postgres
-```
-
-### Python Dependency Conflicts
-```bash
-# Clear cache and reinstall
-pip install --upgrade pip
-pip install --force-reinstall -r requirements.txt
-```
-
-### Port Already in Use
-```bash
-# Find process using port 8000
-lsof -i :8000
-
-# Kill it
-kill -9 <PID>
-```
-
-### Device Switch / Different Machine
-
-The project is fully portable via Docker + Git:
-```bash
-# On new machine
-git clone https://github.com/amue11er/process-modeller-thesis.git
-cd process-modeller-thesis
-
-# Create required directories
-mkdir -p ./files
-mkdir -p ./apps/backend/data/archive-uploads
-
-# Start everything
-docker-compose up -d
-cd apps/backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt
-python -m uvicorn main:app --host 0.0.0.0 --port 8000
-```
-
-Database data is local (development mode) - production would use cloud database.
-
----
-
-## Tech Stack
-
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| Frontend | Streamlit | UI/UX for process modeling |
-| Backend | FastAPI | REST API |
-| Database | PostgreSQL + pgvector | Data storage + vector embeddings |
-| Cache | Redis | Session & temporary data |
-| Orchestration | n8n | Workflow automation + document processing |
-| LLMs | Google Gemini, Claude | AI processing |
-| Deployment | Docker Compose | Local development |
-
----
-
-## Git Workflow
-```bash
-# Before starting work
-git pull origin main
-
-# Make changes
-git add .
-git commit -m "feat: description of changes"
-git push origin main
-
-# Check status
-git status
-git log --oneline
-```
-
----
-
-## Support & Issues
-
-- Check existing [GitHub Issues](https://github.com/amue11er/process-modeller-thesis/issues)
-- Review logs: `docker-compose logs -f`
-- Consult documentation in `/docs`
-
----
-
-## License
+## 📄 License
 
 MIT License - See LICENSE file
