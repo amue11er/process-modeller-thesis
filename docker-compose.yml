@@ -47,6 +47,9 @@ services:
       - WEBHOOK_URL=https://${DOMAIN_NAME}/
       - N8N_EDITOR_BASE_URL=https://${DOMAIN_NAME}/
       - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE}
+      - HMAC_SECRET=${HMAC_SECRET}
+      - N8N_AVAILABLE_EXPRESSIONS_ENV_VARS=HMAC_SECRET
+      - N8N_RESTRICT_ENVIRONMENT_VARIABLES_ACCESS=false
     volumes:
       - n8n_data:/home/node/.n8n
       - ./files:/files
