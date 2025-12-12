@@ -1,0 +1,71 @@
+services:
+  caddy:
+    image: caddy:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+    command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    depends_on:
+      - n8n
+      - portainer
+
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: process-modeler-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: process-modeler-cache
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - redis_data:/data
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: process-modeler-n8n
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PORT=${N8N_PORT}
+      - N8N_PROTOCOL=${N8N_PROTOCOL}
+      - WEBHOOK_URL=https://${DOMAIN_NAME}/
+      - N8N_EDITOR_BASE_URL=https://${DOMAIN_NAME}/
+      - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./files:/files
+    depends_on:
+      - postgres
+      - redis
+
+  portainer:
+    image: portainer/portainer-ce:2.20.2
+    container_name: portainer
+    restart: always
+    privileged: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+  n8n_data:
+  portainer_data:
+  caddy_data:
