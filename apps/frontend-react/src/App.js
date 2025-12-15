@@ -103,7 +103,7 @@ export default function ProcessModeller() {
   const [historyItems, setHistoryItems] = useState([]);
 
   // --- STATE: TÄTIGKEITSLISTE ---
-  const [actFile, setActFile] = useState(null);
+  const [actFiles, setActFiles] = useState([]);
   const [extractedActivities, setExtractedActivities] = useState([]);
   const [isExtracting, setIsExtracting] = useState(false);
   const [serviceName, setServiceName] = useState('');
@@ -187,7 +187,7 @@ export default function ProcessModeller() {
       setUserNotes(item.meta.userNotes || '');
       // Mock-File Objekt für die Anzeige
       if (item.meta.fileName) {
-        setActFile({ name: item.meta.fileName + " (aus Verlauf)" });
+        setActFiles([{ name: item.meta.fileName + " (aus Verlauf)" }]);
       }
       setActiveTab('activities');
     } else if (item.type === 'rag_class') {
@@ -241,24 +241,41 @@ export default function ProcessModeller() {
   };
 
   // --- HANDLER: TÄTIGKEITSLISTE ---
+  const handleActFileSelect = (e) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setActFiles(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeActFile = (index) => {
+    setActFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleExtractActivities = async () => {
-    if (!actFile) { alert("Bitte eine Datei auswählen."); return; }
+    if (actFiles.length === 0) { alert("Bitte mindestens eine Datei auswählen."); return; }
     if (!serviceName) { alert("Bitte geben Sie den Namen der Leistung an."); return; }
     setIsExtracting(true);
     setExtractedActivities([]);
     try {
-      const text = await extractContent(actFile);
+      // Alle Dateien extrahieren und zusammenführen
+      let fullText = "";
+      for (const file of actFiles) {
+        const text = await extractContent(file);
+        fullText += `\n--- QUELLE: ${file.name} ---\n${text}\n`;
+      }
       const response = await fetch(`${API_BASE_URL}/extract-activities`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: text, serviceName: serviceName, userNotes: userNotes })
+        body: JSON.stringify({ query: fullText, serviceName: serviceName, userNotes: userNotes })
       });
       if (response.ok) {
         const data = await response.json();
         if (data.activities && Array.isArray(data.activities)) {
           setExtractedActivities(data.activities);
           // AUTO-SAVE TO DATABASE
-          addToHistory('activity_list', serviceName, data.activities, { fileName: actFile.name, userNotes });
+          const fileNames = actFiles.map(f => f.name).join(', ');
+          addToHistory('activity_list', serviceName, data.activities, { fileName: fileNames, userNotes });
         }
         else alert("Die KI hat keine gültige Liste zurückgegeben.");
       } else throw new Error("Server Fehler: " + response.status);
@@ -570,8 +587,8 @@ export default function ProcessModeller() {
                       <p className="text-slate-400 text-sm">Definieren Sie den Kontext und laden Sie das Gesetz hoch.</p>
                       <div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Name der Leistung / des Prozesses *</label><input type="text" value={serviceName} onChange={(e) => setServiceName(e.target.value)} placeholder="z.B. Todesbescheinigung prüfen" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none placeholder-slate-600 transition-colors" /></div>
                       <div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Zusätzliche Anmerkungen (Optional)</label><textarea value={userNotes} onChange={(e) => setUserNotes(e.target.value)} placeholder="z.B. Fokus nur auf Aufgaben des Gesundheitsamtes legen..." rows={4} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none placeholder-slate-600 resize-none transition-colors" /></div>
-                      <div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Dokument (PDF, JSON, MD, TXT)</label><div className="border border-dashed border-slate-700 rounded-lg p-8 text-center hover:bg-slate-800 transition relative group"><input type="file" accept=".pdf,.json,.md,.txt" onChange={(e) => setActFile(e.target.files[0])} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />{actFile ? (<div className="flex flex-col items-center justify-center gap-2 text-blue-400 font-medium text-sm"><FileIcon fileName={actFile.name} size={32} className="mb-1" />{actFile.name}<span className="text-xs text-slate-500 font-normal">Klicken zum Ändern</span></div>) : (<div className="flex flex-col items-center gap-2 text-slate-500 group-hover:text-slate-300 transition-colors"><Upload size={32} className="opacity-50" /><span className="text-sm">Datei hier ablegen oder klicken</span></div>)}</div></div>
-                      <button onClick={handleExtractActivities} disabled={isExtracting || !actFile || !serviceName} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20 mt-4">{isExtracting ? <Clock size={20} className="animate-spin" /> : <List size={20} />}{isExtracting ? 'Analysiere Dokument...' : 'Tätigkeiten extrahieren'}</button>
+                      <div><div className="flex justify-between items-end mb-2"><label className="block text-xs font-medium text-slate-400 uppercase">Dokumente (PDF, JSON, MD, TXT)</label><span className="text-xs text-slate-500">{actFiles.length} Datei(en)</span></div><div className="bg-slate-950 border border-slate-700 rounded-lg overflow-hidden">{actFiles.map((file, index) => (<div key={index} className="flex items-center justify-between p-3 border-b border-slate-800 bg-slate-900/50"><div className="flex items-center gap-2 truncate max-w-[85%]"><FileIcon fileName={file.name} size={16} className="text-blue-400 flex-shrink-0" /><span className="truncate text-slate-300 text-sm" title={file.name}>{file.name}</span></div><button onClick={() => removeActFile(index)} className="text-slate-500 hover:text-red-400"><X size={14} /></button></div>))}<div className="relative p-4 text-center hover:bg-slate-800 transition cursor-pointer border-t border-slate-800 border-dashed"><input type="file" accept=".pdf,.json,.md,.txt" multiple onChange={handleActFileSelect} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" /><div className="flex items-center justify-center gap-2 text-slate-500 text-sm"><Plus size={16} /> Dateien hinzufügen</div></div></div></div>
+                      <button onClick={handleExtractActivities} disabled={isExtracting || actFiles.length === 0 || !serviceName} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20 mt-4">{isExtracting ? <Clock size={20} className="animate-spin" /> : <List size={20} />}{isExtracting ? 'Analysiere Dokument...' : 'Tätigkeiten extrahieren'}</button>
                     </div>
                   </div>
                   {/* RECHTE SPALTE */}
