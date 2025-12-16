@@ -57,3 +57,21 @@ CREATE TABLE bpmn_diagrams (
   validation_errors JSONB,
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE law_chunks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  law_name VARCHAR NOT NULL,           -- z.B. "VwVfG", "LVwG", "GG"
+  paragraph VARCHAR NOT NULL,          -- z.B. "§ 9", "§ 22 Abs. 1"
+  title VARCHAR,                       -- z.B. "Verfahrensgrundsätze"
+  chunk_text TEXT NOT NULL,            -- Der eigentliche Gesetzestext
+  embedding vector(768),               -- Embedding für Similarity Search
+  source_url VARCHAR,                  -- Optional: Link zum Gesetz
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Index für schnelle Similarity Search
+CREATE INDEX law_chunks_embedding_idx ON law_chunks 
+USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+-- Index für Filterung nach Gesetz
+CREATE INDEX law_chunks_law_name_idx ON law_chunks(law_name);
