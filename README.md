@@ -1,6 +1,6 @@
 # Process Modeler - Bachelor Thesis
 
-Ein intelligentes System zur Automatisierung von Prozessmodellierung (Text-to-BPMN) basierend auf Verwaltungsvorschriften.
+Intelligente Automatisierung von Prozessmodellierung (Text-to-BPMN) basierend auf Verwaltungsvorschriften.
 
 **Live Demo:** [http://209.38.205.46:3000](http://209.38.205.46:3000)  
 **n8n Workflow Engine:** [https://209.38.205.46.nip.io](https://209.38.205.46.nip.io)
@@ -9,7 +9,7 @@ Ein intelligentes System zur Automatisierung von Prozessmodellierung (Text-to-BP
 
 ## 🏗️ Architektur
 
-Das System besteht aus einer Microservice-Architektur, die auf einem Digital Ocean Droplet gehostet wird.
+Das System folgt einer Microservice-Architektur auf einem Digital Ocean Droplet.
 
 ```mermaid
 graph TD
