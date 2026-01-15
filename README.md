@@ -11,16 +11,14 @@ Intelligente Automatisierung von Prozessmodellierung (Text-to-BPMN) basierend au
 
 Das System folgt einer Microservice-Architektur auf einem Digital Ocean Droplet.
 ```mermaid
-graph TD
-    User[Anwender] -->|Port 3000| Frontend[React Frontend (PM2)]
+graph LR
+    User[Anwender] -->|Port 3000| Frontend[React Frontend PM2]
     User -->|HTTPS| Caddy[Caddy Reverse Proxy]
     
-    subgraph "Docker Container Network"
-        Caddy -->|/webhook| n8n[n8n Automation Engine]
-        n8n -->|RAG / LLM| Backend[FastAPI Backend]
-        Backend --> DB[(PostgreSQL + pgvector)]
-        Backend --> Cache[(Redis)]
-    end
+    Caddy -->|webhook| n8n[n8n Automation Engine]
+    n8n -->|RAG LLM| Backend[FastAPI Backend]
+    Backend --> DB[(PostgreSQL + pgvector)]
+    Backend --> Cache[(Redis)]
     
     Frontend -->|API Calls| n8n
 ```
