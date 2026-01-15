@@ -24,3 +24,19 @@ graph TD
     end
     
     Frontend -->|API Calls| n8n
+
+🚀 Quick Start
+
+1. Lokale Entwicklung (Mac/Linux/Windows)
+
+git clone [https://github.com/amue11er/process-modeller-thesis.git](https://github.com/amue11er/process-modeller-thesis.git)
+cd process-modeller-thesis
+
+# Docker Services starten (PostgreSQL, Redis, n8n)
+docker-compose up -d
+
+# Frontend starten
+cd apps/frontend-react
+npm install
+npm start
+# → http://localhost:3000
