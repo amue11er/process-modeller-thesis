@@ -1,4 +1,3 @@
-```markdown
 # Process Modeler - Bachelor Thesis
 
 Intelligente Automatisierung von Prozessmodellierung (Text-to-BPMN) basierend auf Verwaltungsvorschriften.
@@ -11,7 +10,6 @@ Intelligente Automatisierung von Prozessmodellierung (Text-to-BPMN) basierend au
 ## 🏗️ Architektur
 
 Das System folgt einer Microservice-Architektur auf einem Digital Ocean Droplet.
-
 ```mermaid
 graph TD
     User[Anwender] -->|Port 3000| Frontend[React Frontend (PM2)]
@@ -32,7 +30,6 @@ graph TD
 ## 🚀 Quick Start
 
 ### 1. Lokale Entwicklung (Mac/Linux/Windows)
-
 ```bash
 git clone https://github.com/amue11er/process-modeller-thesis.git
 cd process-modeller-thesis
@@ -54,7 +51,6 @@ Das Produktivsystem nutzt **PM2** für das Frontend (Static Build) und **Docker 
 > ⚠️ **WICHTIG:** Auf dem Server niemals `npm start` verwenden (Out-of-Memory Gefahr).
 
 #### Erstinstallation (Einmalig)
-
 ```bash
 ssh root@209.38.205.46
 
@@ -87,7 +83,6 @@ pm2 startup
 ## 🔄 Update Workflow (Redeployment)
 
 Wenn neuer Code auf GitHub gepusht wurde, führen Sie diese Schritte auf dem Server aus:
-
 ```bash
 ssh root@209.38.205.46
 cd /opt/process-modeller-thesis
@@ -133,7 +128,6 @@ docker-compose up -d
 
 Der Server hat zu wenig physischen RAM für den Build-Prozess.
 **Lösung:** Swap aktivieren (siehe oben) und Build mit Flag starten:
-
 ```bash
 NODE_OPTIONS="--max-old-space-size=2560" npm run build
 ```
@@ -142,7 +136,6 @@ NODE_OPTIONS="--max-old-space-size=2560" npm run build
 
 Oft pausiert das System Docker-Container, wenn das Frontend gebaut wird, um RAM zu sparen.
 **Lösung:** Container einfach wieder wecken:
-
 ```bash
 cd /opt/process-modeller-thesis
 docker-compose up -d
@@ -173,4 +166,3 @@ docker-compose up -d
 ## 📄 License
 
 MIT License
-```
