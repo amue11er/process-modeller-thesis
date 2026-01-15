@@ -24,6 +24,7 @@ graph TD
     end
     
     Frontend -->|API Calls| n8n
+```
 
 🚀 Quick Start
 
