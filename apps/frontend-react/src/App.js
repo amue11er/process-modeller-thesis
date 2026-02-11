@@ -49,42 +49,35 @@ const extractContent = async (file) => {
   }
 };
 
-// --- HANDLER: MUSTERPROZESSE (NEU) ---
 const handleUploadPattern = async () => {
-  // Validierung: Name und Datei müssen vorhanden sein
-  if (!patternName || patternFiles.length === 0) {
-    alert("Bitte geben Sie einen Namen an und wählen Sie eine Datei aus.");
-    return;
-  }
+  // Line 55 nutzt nun patternName und patternFiles korrekt
+  if (!patternName || patternFiles.length === 0) return; 
   
-  setIsUploadingPattern(true);
+  setIsUploadingPattern(true); // Line 60 definiert
   try {
-    const file = patternFiles[0];
-    const content = await extractContent(file); // Nutzt deinen vorhandenen Universal-Extraktor
+    const file = patternFiles[0]; // Line 62 definiert
+    const content = await extractContent(file);
 
-    // Senden an den n8n Webhook-Pfad
     const response = await fetch("https://209.38.205.46.nip.io/webhook/insert_musterprozesse", {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
-        title: patternName,
+        title: patternName, // Line 70 definiert
         content: content,
         fileType: file.name.split('.').pop()
       })
     });
 
     if (response.ok) {
-      alert("Musterprozess erfolgreich in der Datenbank gespeichert!");
-      setPatternName('');
-      setPatternFiles([]);
-    } else {
-      throw new Error("Fehler beim Senden an n8n: " + response.status);
+      alert("Erfolg!");
+      setPatternName(''); // Line 78 definiert
+      setPatternFiles([]); // Line 79 definiert
     }
   } catch (e) {
-    console.error("Upload Fehler:", e);
     alert("Fehler: " + e.message);
+  } finally {
+    setIsUploadingPattern(false); // Line 87 definiert
   }
-  setIsUploadingPattern(false);
 };
 
 const cleanXmlResponse = (responseString) => {
