@@ -49,6 +49,44 @@ const extractContent = async (file) => {
   }
 };
 
+// --- HANDLER: MUSTERPROZESSE (NEU) ---
+const handleUploadPattern = async () => {
+  // Validierung: Name und Datei müssen vorhanden sein
+  if (!patternName || patternFiles.length === 0) {
+    alert("Bitte geben Sie einen Namen an und wählen Sie eine Datei aus.");
+    return;
+  }
+  
+  setIsUploadingPattern(true);
+  try {
+    const file = patternFiles[0];
+    const content = await extractContent(file); // Nutzt deinen vorhandenen Universal-Extraktor
+
+    // Senden an den n8n Webhook-Pfad
+    const response = await fetch("https://209.38.205.46.nip.io/webhook/insert_musterprozesse", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        title: patternName,
+        content: content,
+        fileType: file.name.split('.').pop()
+      })
+    });
+
+    if (response.ok) {
+      alert("Musterprozess erfolgreich in der Datenbank gespeichert!");
+      setPatternName('');
+      setPatternFiles([]);
+    } else {
+      throw new Error("Fehler beim Senden an n8n: " + response.status);
+    }
+  } catch (e) {
+    console.error("Upload Fehler:", e);
+    alert("Fehler: " + e.message);
+  }
+  setIsUploadingPattern(false);
+};
+
 const cleanXmlResponse = (responseString) => {
   if (typeof responseString !== 'string') return '';
   return responseString.replace(/^```xml\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
@@ -98,6 +136,11 @@ export default function ProcessModeller() {
   const [currentView, setCurrentView] = useState('modeller'); // 'modeller' | 'history'
   const [activeTab, setActiveTab] = useState('activities');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // --- STATE: MUSTERPROZESSE ---
+  const [patternName, setPatternName] = useState('');
+  const [patternFiles, setPatternFiles] = useState([]);
+  const [isUploadingPattern, setIsUploadingPattern] = useState(false);
 
   // --- STATE: HISTORY / DATABASE (Neu) ---
   const [historyItems, setHistoryItems] = useState([]);
