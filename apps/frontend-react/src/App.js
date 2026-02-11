@@ -137,10 +137,10 @@ export default function ProcessModeller() {
   const [activeTab, setActiveTab] = useState('activities');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // --- STATE: MUSTERPROZESSE ---
-  const [patternName, setPatternName] = useState('');
+  // --- STATE: MUSTERPROZESSE TAB ---
   const [patternFiles, setPatternFiles] = useState([]);
   const [isUploadingPattern, setIsUploadingPattern] = useState(false);
+  const [patternName, setPatternName] = useState('');
 
   // --- STATE: HISTORY / DATABASE (Neu) ---
   const [historyItems, setHistoryItems] = useState([]);
