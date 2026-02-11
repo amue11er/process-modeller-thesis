@@ -49,37 +49,6 @@ const extractContent = async (file) => {
   }
 };
 
-const handleUploadPattern = async () => {
-  // Line 55 nutzt nun patternName und patternFiles korrekt
-  if (!patternName || patternFiles.length === 0) return; 
-  
-  setIsUploadingPattern(true); // Line 60 definiert
-  try {
-    const file = patternFiles[0]; // Line 62 definiert
-    const content = await extractContent(file);
-
-    const response = await fetch("https://209.38.205.46.nip.io/webhook/insert_musterprozesse", {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        title: patternName, // Line 70 definiert
-        content: content,
-        fileType: file.name.split('.').pop()
-      })
-    });
-
-    if (response.ok) {
-      alert("Erfolg!");
-      setPatternName(''); // Line 78 definiert
-      setPatternFiles([]); // Line 79 definiert
-    }
-  } catch (e) {
-    alert("Fehler: " + e.message);
-  } finally {
-    setIsUploadingPattern(false); // Line 87 definiert
-  }
-};
-
 const cleanXmlResponse = (responseString) => {
   if (typeof responseString !== 'string') return '';
   return responseString.replace(/^```xml\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
@@ -134,6 +103,37 @@ export default function ProcessModeller() {
   const [patternFiles, setPatternFiles] = useState([]);
   const [isUploadingPattern, setIsUploadingPattern] = useState(false);
   const [patternName, setPatternName] = useState('');
+
+  const handleUploadPattern = async () => {
+  // Line 55 nutzt nun patternName und patternFiles korrekt
+  if (!patternName || patternFiles.length === 0) return; 
+  
+  setIsUploadingPattern(true); // Line 60 definiert
+  try {
+    const file = patternFiles[0]; // Line 62 definiert
+    const content = await extractContent(file);
+
+    const response = await fetch("https://209.38.205.46.nip.io/webhook/insert_musterprozesse", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        title: patternName, // Line 70 definiert
+        content: content,
+        fileType: file.name.split('.').pop()
+      })
+    });
+
+    if (response.ok) {
+      alert("Erfolg!");
+      setPatternName(''); // Line 78 definiert
+      setPatternFiles([]); // Line 79 definiert
+    }
+  } catch (e) {
+    alert("Fehler: " + e.message);
+  } finally {
+    setIsUploadingPattern(false); // Line 87 definiert
+  }
+};
 
   // --- STATE: HISTORY / DATABASE (Neu) ---
   const [historyItems, setHistoryItems] = useState([]);
