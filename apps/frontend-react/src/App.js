@@ -110,33 +110,45 @@ export default function ProcessModeller() {
   const [musterList, setMusterList] = useState([]);
 
   const handleUploadPattern = async () => {
-  // Line 55 nutzt nun patternName und patternFiles korrekt
-  if (!patternName || patternFiles.length === 0) return; 
-  
-  setIsUploadingPattern(true); // Line 60 definiert
+  // Prüfung: Name und die XProzess-Datei müssen vorhanden sein
+  if (!patternName || !xProcessFile) {
+    alert("Bitte mindestens einen Namen und die XProzess-XML auswählen.");
+    return;
+  }
+
+  setIsUploadingPattern(true);
   try {
-    const file = patternFiles[0]; // Line 62 definiert
-    const content = await extractContent(file);
+    // Wir nutzen FormData für den kombinierten Upload (XML + PDF)
+    const formData = new FormData();
+    formData.append('title', patternName);
+    formData.append('xprocess', xProcessFile); // Die XML Datei
+    
+    if (visualPdfFile) {
+      formData.append('diagram', visualPdfFile); // Die PDF Datei (optional)
+    }
 
     const response = await fetch("https://209.38.205.46.nip.io/webhook/insert_musterprozesse", {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        title: patternName, // Line 70 definiert
-        content: content,
-        fileType: file.name.split('.').pop()
-      })
+      // WICHTIG: Bei FormData darf kein 'Content-Type' Header manuell gesetzt werden!
+      body: formData 
     });
 
     if (response.ok) {
-      alert("Erfolg!");
-      setPatternName(''); // Line 78 definiert
-      setPatternFiles([]); // Line 79 definiert
+      alert("Musterprozess-Paket erfolgreich an n8n gesendet!");
+      // Felder zurücksetzen
+      setPatternName('');
+      setXProcessFile(null);
+      setVisualPdfFile(null);
+      // Hier könntest du später die Liste aktualisieren
+    } else {
+      const errorText = await response.text();
+      throw new Error(`Server-Fehler: ${response.status} - ${errorText}`);
     }
   } catch (e) {
-    alert("Fehler: " + e.message);
+    console.error("Upload-Fehler:", e);
+    alert("Fehler beim Speichern: " + e.message);
   } finally {
-    setIsUploadingPattern(false); // Line 87 definiert
+    setIsUploadingPattern(false);
   }
 };
 
