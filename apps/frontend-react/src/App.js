@@ -177,11 +177,6 @@ export default function ProcessModeller() {
   const [documentPairs, setDocumentPairs] = useState([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
-  // --- STATE: MUSTERPROZESSE TAB ---
-  const [patternFiles, setPatternFiles] = useState([]);
-  const [isUploadingPattern, setIsUploadingPattern] = useState(false);
-  const [patternName, setPatternName] = useState('');
-
   // --- STATE: QUALITÄTSSICHERUNG TAB ---
   const [allModels, setAllModels] = useState([]);
   const [previewItem, setPreviewItem] = useState(null);
