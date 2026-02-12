@@ -105,6 +105,7 @@ export default function ProcessModeller() {
   const [xProcessFile, setXProcessFile] = useState(null);
   const [musterList, setMusterList] = useState([]);
   const [isLoadingMuster, setIsLoadingMuster] = useState(false);
+  const [selectedPatternId, setSelectedPatternId] = useState('');
 
   const fetchMuster = async () => {
   setIsLoadingMuster(true);
@@ -139,6 +140,27 @@ export default function ProcessModeller() {
     }
   } catch (error) {
     console.error("Netzwerkfehler beim Löschen:", error);
+  }
+};
+
+  // Neue States für das Umbenennen
+const [editingId, setEditingId] = useState(null);
+const [newName, setNewName] = useState('');
+
+const handleRename = async (id) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/rename_musterprozess`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, newTitle: newName })
+    });
+
+    if (response.ok) {
+      setMusterList(prev => prev.map(m => m.id === id ? { ...m, title: newName } : m));
+      setEditingId(null);
+    }
+  } catch (e) {
+    console.error("Fehler beim Umbenennen:", e);
   }
 };
 
@@ -341,7 +363,7 @@ export default function ProcessModeller() {
       const response = await fetch(`${API_BASE_URL}/extract-activities`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: fullText, serviceName: serviceName, userNotes: userNotes })
+        body: JSON.stringify({ query: fullText, serviceName: serviceName, userNotes: userNotes, patternId: selectedPatternId })
       });
       if (response.ok) {
         const data = await response.json();
@@ -674,7 +696,20 @@ export default function ProcessModeller() {
                       <p className="text-slate-400 text-sm">Definieren Sie den Kontext und laden Sie das Gesetz hoch.</p>
                       <div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Name der Leistung / des Prozesses *</label><input type="text" value={serviceName} onChange={(e) => setServiceName(e.target.value)} placeholder="z.B. Todesbescheinigung prüfen" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none placeholder-slate-600 transition-colors" /></div>
                       <div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Zusätzliche Anmerkungen (Optional)</label><textarea value={userNotes} onChange={(e) => setUserNotes(e.target.value)} placeholder="z.B. Fokus nur auf Aufgaben des Gesundheitsamtes legen..." rows={4} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none placeholder-slate-600 resize-none transition-colors" /></div>
-                      <div><div className="flex justify-between items-end mb-2"><label className="block text-xs font-medium text-slate-400 uppercase">Dokumente (PDF, JSON, MD, TXT)</label><span className="text-xs text-slate-500">{actFiles.length} Datei(en)</span></div><div className="bg-slate-950 border border-slate-700 rounded-lg overflow-hidden">{actFiles.map((file, index) => (<div key={index} className="flex items-center justify-between p-3 border-b border-slate-800 bg-slate-900/50"><div className="flex items-center gap-2 truncate max-w-[85%]"><FileIcon fileName={file.name} size={16} className="text-blue-400 flex-shrink-0" /><span className="truncate text-slate-300 text-sm" title={file.name}>{file.name}</span></div><button onClick={() => removeActFile(index)} className="text-slate-500 hover:text-red-400"><X size={14} /></button></div>))}<div className="relative p-4 text-center hover:bg-slate-800 transition cursor-pointer border-t border-slate-800 border-dashed"><input type="file" accept=".pdf,.json,.md,.txt" multiple onChange={handleActFileSelect} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" /><div className="flex items-center justify-center gap-2 text-slate-500 text-sm"><Plus size={16} /> Dateien hinzufügen</div></div></div></div>
+                      <div>
+                      <label className="block text-xs font-medium text-slate-400 uppercase mb-2">Referenz-Musterprozess (Optional)</label>
+                      <select 
+                        value={selectedPatternId} 
+                        onChange={(e) => setSelectedPatternId(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none transition-colors"
+                      >
+                        <option value="">Kein Muster ausgewählt</option>
+                        {musterList.map(m => (
+                          <option key={m.id} value={m.id}>{m.title}</option>
+                        ))}
+                      </select>
+                    </div>
+                     <div><div className="flex justify-between items-end mb-2"><label className="block text-xs font-medium text-slate-400 uppercase">Dokumente (PDF, JSON, MD, TXT)</label><span className="text-xs text-slate-500">{actFiles.length} Datei(en)</span></div><div className="bg-slate-950 border border-slate-700 rounded-lg overflow-hidden">{actFiles.map((file, index) => (<div key={index} className="flex items-center justify-between p-3 border-b border-slate-800 bg-slate-900/50"><div className="flex items-center gap-2 truncate max-w-[85%]"><FileIcon fileName={file.name} size={16} className="text-blue-400 flex-shrink-0" /><span className="truncate text-slate-300 text-sm" title={file.name}>{file.name}</span></div><button onClick={() => removeActFile(index)} className="text-slate-500 hover:text-red-400"><X size={14} /></button></div>))}<div className="relative p-4 text-center hover:bg-slate-800 transition cursor-pointer border-t border-slate-800 border-dashed"><input type="file" accept=".pdf,.json,.md,.txt" multiple onChange={handleActFileSelect} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" /><div className="flex items-center justify-center gap-2 text-slate-500 text-sm"><Plus size={16} /> Dateien hinzufügen</div></div></div></div>
                       <button onClick={handleExtractActivities} disabled={isExtracting || actFiles.length === 0 || !serviceName} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20 mt-4">{isExtracting ? <Clock size={20} className="animate-spin" /> : <List size={20} />}{isExtracting ? 'Analysiere Dokument...' : 'Tätigkeiten extrahieren'}</button>
                     </div>
                   </div>
@@ -763,25 +798,47 @@ export default function ProcessModeller() {
                     
                     {musterList.length > 0 ? (
                       <div className="space-y-3">
-                        {musterList.map((m) => (
-                          <div key={m.id} className="bg-slate-950 border border-slate-800 p-4 rounded-lg flex justify-between items-center hover:border-slate-700 transition-colors">
-                            <div>
-                              <div className="text-white font-medium">{m.title}</div>
-                              <div className="text-xs text-slate-500 flex items-center gap-2 mt-1">
-                                <span className="flex items-center gap-1"><FileCode size={12} /> XProzess</span>
+                        {musterList.map(m => (
+                          <div key={m.id} className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between group hover:border-blue-500/50 transition-all">
+                            <div className="flex items-center gap-4 flex-1">
+                              <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500 flex-shrink-0">
+                                <FileCode size={20}/>
                               </div>
+                              
+                              {editingId === m.id ? (
+                                <div className="flex gap-2 w-full mr-4">
+                                  <input 
+                                    value={newName} 
+                                    onChange={e => setNewName(e.target.value)}
+                                    className="bg-slate-950 border border-blue-500 rounded px-2 py-1 text-sm flex-1 text-white focus:outline-none"
+                                    autoFocus
+                                  />
+                                  <button onClick={() => handleRename(m.id)} className="text-green-500 p-1"><Check size={16}/></button>
+                                  <button onClick={() => setEditingId(null)} className="text-red-500 p-1"><X size={16}/></button>
+                                </div>
+                              ) : (
+                                <div>
+                                  <h4 className="text-white font-medium truncate max-w-[300px]">{m.title}</h4>
+                                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">XProzess-Modell</p>
+                                </div>
+                              )}
                             </div>
+                            
                             <div className="flex gap-2">
-                              <button 
-                                className="p-2 text-slate-500 hover:text-red-400 hover:bg-slate-800 rounded transition"
-                                onClick={() => deleteMuster(m.id)}
-                              >
-                                <Trash2 size={18} />
+                              {!editingId && (
+                                <button 
+                                  onClick={() => { setEditingId(m.id); setNewName(m.title); }}
+                                  className="p-2 text-slate-500 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all"
+                                >
+                                  <Edit2 size={16}/>
+                                </button>
+                              )}
+                              <button onClick={() => deleteMuster(m.id)} className="p-2 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">
+                                <Trash2 size={18}/>
                               </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                    </div>
+                        );
+                      })
                     ) : (
                       <div className="text-center py-12 text-slate-600 border border-dashed border-slate-800 rounded-lg">
                         <Database size={40} className="mx-auto mb-3 opacity-20" />
