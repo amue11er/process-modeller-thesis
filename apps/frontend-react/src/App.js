@@ -107,19 +107,21 @@ export default function ProcessModeller() {
   const [isLoadingMuster, setIsLoadingMuster] = useState(false);
 
   const fetchMuster = async () => {
-    setIsLoadingMuster(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/get_musterprozesse`);
-      if (response.ok) {
-        const data = await response.json();
-        setMusterList(data);
-      }
-    } catch (error) {
-      console.error("Fehler beim Laden der Muster:", error);
-    } finally {
-      setIsLoadingMuster(false);
+  setIsLoadingMuster(true);
+  try {
+    const response = await fetch(`${API_BASE_URL}/get_musterprozesse`);
+    if (response.ok) {
+      const data = await response.json();
+      // WICHTIG: n8n sendet oft ein Array. Falls es ein Objekt ist, 
+      // müssen wir sicherstellen, dass React ein Array erhält.
+      setMusterList(Array.isArray(data) ? data : (data.data || []));
     }
-  };
+  } catch (error) {
+    console.error("Fehler beim Laden der Muster:", error);
+  } finally {
+    setIsLoadingMuster(false);
+  }
+};
 
   const deleteMuster = async (id) => {
     if (!window.confirm("Muster wirklich aus der Datenbank löschen?")) return;
