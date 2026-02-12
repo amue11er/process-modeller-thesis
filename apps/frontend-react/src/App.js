@@ -124,20 +124,23 @@ export default function ProcessModeller() {
 };
 
   const deleteMuster = async (id) => {
-    if (!window.confirm("Muster wirklich aus der Datenbank löschen?")) return;
-    try {
-      const response = await fetch(`${API_BASE_URL}/delete_musterprozess?id=${id}`, {
-        method: 'DELETE'
-      });
-      if (response.ok) {
-        fetchMuster(); // Liste neu laden
-      } else {
-        alert("Fehler beim Löschen des Musters.");
-      }
-    } catch (error) {
-      console.error("Fehler beim Löschen:", error);
+  if (!window.confirm("Muster wirklich aus der Datenbank löschen?")) return;
+  try {
+    // WICHTIG: Hier muss 'await' stehen, damit erst gelöscht und dann neu geladen wird
+    const response = await fetch(`${API_BASE_URL}/delete_musterprozess?id=${id}`, {
+      method: 'DELETE'
+    });
+    
+    if (response.ok) {
+      // Nach dem erfolgreichen Löschen die Liste neu vom Server holen
+      await fetchMuster(); 
+    } else {
+      alert("Fehler beim Löschen des Musters.");
     }
-  };
+  } catch (error) {
+    console.error("Fehler beim Löschen:", error);
+  }
+};
 
   useEffect(() => {
     if (isLoggedIn) fetchMuster();
@@ -474,16 +477,25 @@ export default function ProcessModeller() {
   };
 
   const handleDeletePair = async (pairId) => {
-    if (!window.confirm("Wirklich löschen?")) return;
-    try {
-      const response = await fetch(`${API_BASE_URL}/delete`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: pairId })
-      });
-      if (response.ok) setDocumentPairs(prev => prev.filter(p => p.id !== pairId));
-      else alert("Fehler beim Löschen.");
-    } catch (e) { alert("Fehler: " + e.message); }
-  };
+  if (!window.confirm("Wirklich löschen?")) return;
+  try {
+    const response = await fetch(`${API_BASE_URL}/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: pairId })
+    });
+    
+    if (response.ok) {
+      // OPTIMISTIC UI UPDATE: Entfernt das Item sofort aus dem State, 
+      // ohne auf einen neuen Netzwerk-Request zu warten.
+      setDocumentPairs(prev => prev.filter(p => p.id !== pairId));
+    } else {
+      alert("Fehler beim Löschen.");
+    }
+  } catch (error) {
+    console.error("Fehler:", error);
+  }
+};
 
   const filteredDocuments = useMemo(() => documentPairs.filter(doc => doc.title.toLowerCase().includes(searchTerm.toLowerCase())), [documentPairs, searchTerm]);
   const handleRateModel = (modelId, rating, feedback) => setAllModels(allModels.map(m => m.id === modelId ? { ...m, rating, feedback } : m));
