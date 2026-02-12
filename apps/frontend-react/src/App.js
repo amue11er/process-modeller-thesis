@@ -186,10 +186,14 @@ const handleRename = async (id) => {
       });
 
       if (response.ok) {
-        alert("Musterprozess-Paket erfolgreich an n8n gesendet!");
+        // Zuerst die Felder leeren für sofortiges visuelles Feedback
         setPatternName('');
         setXProcessFile(null);
-        fetchMuster(); // Liste aktualisieren
+
+        // WICHTIG: Die Liste neu vom Server abrufen und auf die Antwort warten
+        await fetchMuster(); 
+        
+        console.log("Liste nach Upload erfolgreich aktualisiert");
       } else {
         const errorText = await response.text();
         throw new Error(`Server-Fehler: ${response.status} - ${errorText}`);
