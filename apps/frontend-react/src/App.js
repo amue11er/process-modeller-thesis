@@ -126,19 +126,19 @@ export default function ProcessModeller() {
   const deleteMuster = async (id) => {
   if (!window.confirm("Muster wirklich aus der Datenbank löschen?")) return;
   try {
-    // WICHTIG: Hier muss 'await' stehen, damit erst gelöscht und dann neu geladen wird
     const response = await fetch(`${API_BASE_URL}/delete_musterprozess?id=${id}`, {
       method: 'DELETE'
     });
-    
+
     if (response.ok) {
-      // Nach dem erfolgreichen Löschen die Liste neu vom Server holen
-      await fetchMuster(); 
+      // WICHTIG: Wir entfernen das gelöschte Element sofort aus der Anzeige
+      setMusterList(prevList => prevList.filter(item => item.id !== id));
+      console.log("Eintrag lokal entfernt");
     } else {
-      alert("Fehler beim Löschen des Musters.");
+      alert("Fehler beim Löschen des Musters auf dem Server.");
     }
   } catch (error) {
-    console.error("Fehler beim Löschen:", error);
+    console.error("Netzwerkfehler beim Löschen:", error);
   }
 };
 
@@ -484,13 +484,12 @@ export default function ProcessModeller() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: pairId })
     });
-    
+
     if (response.ok) {
-      // OPTIMISTIC UI UPDATE: Entfernt das Item sofort aus dem State, 
-      // ohne auf einen neuen Netzwerk-Request zu warten.
-      setDocumentPairs(prev => prev.filter(p => p.id !== pairId));
+      // WICHTIG: Das Archiv-Element sofort aus der Tabelle löschen
+      setDocumentPairs(prevPairs => prevPairs.filter(p => p.id !== pairId));
     } else {
-      alert("Fehler beim Löschen.");
+      alert("Fehler beim Löschen des Archiv-Eintrags.");
     }
   } catch (error) {
     console.error("Fehler:", error);
