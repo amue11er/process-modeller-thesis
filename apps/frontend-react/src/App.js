@@ -693,6 +693,7 @@ export default function ProcessModeller() {
 
               {activeTab === 'patterns' && (
                 <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-300">
+                  {/* --- UPLOAD SECTION --- */}
                   <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
                     <div className="flex items-center justify-between mb-6">
                       <div>
@@ -702,47 +703,48 @@ export default function ProcessModeller() {
                       <Database size={24} className="text-blue-500" />
                     </div>
                     
-                    <div className="mb-6">
-                      <label className="block text-xs font-medium text-slate-400 uppercase mb-2">Name des Musters</label>
-                      <input 
-                        type="text" 
-                        value={patternName} 
-                        onChange={(e) => setPatternName(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500" 
-                        placeholder="z.B. Standard-Anzeigeverfahren" 
-                      />
-                    </div>
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 uppercase mb-2">Name des Musters</label>
+                        <input 
+                          type="text" 
+                          value={patternName} 
+                          onChange={(e) => setPatternName(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors" 
+                          placeholder="z.B. Standard-Anzeigeverfahren" 
+                        />
+                      </div>
               
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                       <div>
                         <label className="block text-xs font-medium text-slate-400 uppercase mb-2">XProzess Daten (XML / JSON)</label>
-                        <div className="relative border border-dashed border-slate-700 rounded-lg p-4 text-center hover:bg-slate-800 transition cursor-pointer">
+                        <div className="relative border border-dashed border-slate-700 rounded-lg p-8 text-center hover:bg-slate-800 transition cursor-pointer group">
                           <input 
                             type="file" 
                             accept=".xml,.json" 
                             onChange={(e) => setXProcessFile(e.target.files[0])}
-                            className="absolute inset-0 opacity-0 cursor-pointer" 
+                            className="absolute inset-0 opacity-0 cursor-pointer z-10" 
                           />
                           <div className="flex flex-col items-center gap-2">
-                            <FileCode size={24} className={xProcessFile ? "text-blue-400" : "text-slate-600"} />
+                            <FileCode size={32} className={xProcessFile ? "text-blue-400" : "text-slate-600 group-hover:text-slate-400"} />
                             <span className="text-sm text-slate-500">
-                              {xProcessFile ? xProcessFile.name : "XProzess Datei auswählen"}
+                              {xProcessFile ? xProcessFile.name : "XProzess Datei auswählen oder hierher ziehen"}
                             </span>
                           </div>
                         </div>
                       </div>
-              
                     
-                    <button 
-                      onClick={handleUploadPattern}
-                      disabled={isUploadingPattern || !patternName || !xProcessFile}
-                      className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-blue-900/20"
-                    >
-                      {isUploadingPattern ? <Clock size={18} className="animate-spin" /> : <Save size={18} />}
-                      Musterprozess-Paket speichern
-                    </button>
+                      <button 
+                        onClick={handleUploadPattern}
+                        disabled={isUploadingPattern || !patternName || !xProcessFile}
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20"
+                      >
+                        {isUploadingPattern ? <Clock size={20} className="animate-spin" /> : <Save size={20} />}
+                        {isUploadingPattern ? 'Wird gespeichert...' : 'Musterprozess-Paket speichern'}
+                      </button>
+                    </div>
                   </div>
               
+                  {/* --- LIST SECTION --- */}
                   <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
                     <h3 className="text-sm font-medium text-slate-400 uppercase mb-4">Verfügbare Musterprozesse</h3>
                     
@@ -758,10 +760,10 @@ export default function ProcessModeller() {
                             </div>
                             <div className="flex gap-2">
                               <button 
-                                className="p-1.5 text-slate-500 hover:text-red-400 transition"
+                                className="p-2 text-slate-500 hover:text-red-400 hover:bg-slate-800 rounded transition"
                                 onClick={() => deleteMuster(m.id)}
                               >
-                                <Trash2 size={16} />
+                                <Trash2 size={18} />
                               </button>
                             </div>
                           </div>
