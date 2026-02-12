@@ -740,115 +740,115 @@ const handleRename = async (id) => {
               )}
 
               {activeTab === 'patterns' && (
-                <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-300">
-                  {/* --- UPLOAD SECTION --- */}
-                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h2 className="text-lg font-semibold text-white">FIM Musterprozess hochladen</h2>
-                        <p className="text-slate-400 text-sm mt-1">Verknüpfen Sie XProzess-Logik mit einer visuellen PDF-Referenz.</p>
-                      </div>
-                      <Database size={24} className="text-blue-500" />
-                    </div>
-                    
-                    <div className="space-y-6">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-400 uppercase mb-2">Name des Musters</label>
-                        <input 
-                          type="text" 
-                          value={patternName} 
-                          onChange={(e) => setPatternName(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors" 
-                          placeholder="z.B. Standard-Anzeigeverfahren" 
-                        />
-                      </div>
+                <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-300">
+                  {/* --- UPLOAD SECTION --- */}
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h2 className="text-lg font-semibold text-white">FIM Musterprozess hochladen</h2>
+                        <p className="text-slate-400 text-sm mt-1">Verknüpfen Sie XProzess-Logik mit einer visuellen PDF-Referenz.</p>
+                      </div>
+                      <Database size={24} className="text-blue-500" />
+                    </div>
+                    
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 uppercase mb-2">Name des Musters</label>
+                        <input 
+                          type="text" 
+                          value={patternName} 
+                          onChange={(e) => setPatternName(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none transition-colors" 
+                          placeholder="z.B. Standard-Anzeigeverfahren" 
+                        />
+                      </div>
               
-                      <div>
-                        <label className="block text-xs font-medium text-slate-400 uppercase mb-2">XProzess Daten (XML / JSON)</label>
-                        <div className="relative border border-dashed border-slate-700 rounded-lg p-8 text-center hover:bg-slate-800 transition cursor-pointer group">
-                          <input 
-                            type="file" 
-                            accept=".xml,.json" 
-                            onChange={(e) => setXProcessFile(e.target.files[0])}
-                            className="absolute inset-0 opacity-0 cursor-pointer z-10" 
-                          />
-                          <div className="flex flex-col items-center gap-2">
-                            <FileCode size={32} className={xProcessFile ? "text-blue-400" : "text-slate-600 group-hover:text-slate-400"} />
-                            <span className="text-sm text-slate-500">
-                              {xProcessFile ? xProcessFile.name : "XProzess Datei auswählen oder hierher ziehen"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 uppercase mb-2">XProzess Daten (XML / JSON)</label>
+                        <div className="relative border border-dashed border-slate-700 rounded-lg p-8 text-center hover:bg-slate-800 transition cursor-pointer group">
+                          <input 
+                            type="file" 
+                            accept=".xml,.json" 
+                            onChange={(e) => setXProcessFile(e.target.files[0])}
+                            className="absolute inset-0 opacity-0 cursor-pointer z-10" 
+                          />
+                          <div className="flex flex-col items-center gap-2">
+                            <FileCode size={32} className={xProcessFile ? "text-blue-400" : "text-slate-600 group-hover:text-slate-400"} />
+                            <span className="text-sm text-slate-500">
+                              {xProcessFile ? xProcessFile.name : "XProzess Datei auswählen oder hierher ziehen"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     
-                      <button 
-                        onClick={handleUploadPattern}
-                        disabled={isUploadingPattern || !patternName || !xProcessFile}
-                        className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20"
-                      >
-                        {isUploadingPattern ? <Clock size={20} className="animate-spin" /> : <Save size={20} />}
-                        {isUploadingPattern ? 'Wird gespeichert...' : 'Musterprozess-Paket speichern'}
-                      </button>
-                    </div>
-                  </div>
+                      <button 
+                        onClick={handleUploadPattern}
+                        disabled={isUploadingPattern || !patternName || !xProcessFile}
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20"
+                      >
+                        {isUploadingPattern ? <Clock size={20} className="animate-spin" /> : <Save size={20} />}
+                        {isUploadingPattern ? 'Wird gespeichert...' : 'Musterprozess-Paket speichern'}
+                      </button>
+                    </div>
+                  </div>
               
-                  {/* --- LIST SECTION --- */}
-                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
-                    <h3 className="text-sm font-medium text-slate-400 uppercase mb-4">Verfügbare Musterprozesse</h3>
+                  {/* --- LIST SECTION --- */}
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+                    <h3 className="text-sm font-medium text-slate-400 uppercase mb-4">Verfügbare Musterprozesse</h3>
                     
-                    {musterList.length > 0 ? (
-                      <div className="space-y-3">
-                        {musterList.map(m => (
-                          <div key={m.id} className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between group hover:border-blue-500/50 transition-all">
-                            <div className="flex items-center gap-4 flex-1">
-                              <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500 flex-shrink-0">
-                                <FileCode size={20}/>
-                              </div>
+                    {musterList.length > 0 ? (
+                      <div className="space-y-3">
+                        {musterList.map(m => (
+                          <div key={m.id} className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between group hover:border-blue-500/50 transition-all">
+                            <div className="flex items-center gap-4 flex-1">
+                              <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500 flex-shrink-0">
+                                <FileCode size={20}/>
+                              </div>
                               
-                              {editingId === m.id ? (
-                                <div className="flex gap-2 w-full mr-4">
-                                  <input 
-                                    value={newName} 
-                                    onChange={e => setNewName(e.target.value)}
-                                    className="bg-slate-950 border border-blue-500 rounded px-2 py-1 text-sm flex-1 text-white focus:outline-none"
-                                    autoFocus
-                                  />
-                                  <button onClick={() => handleRename(m.id)} className="text-green-500 p-1"><Check size={16}/></button>
-                                  <button onClick={() => setEditingId(null)} className="text-red-500 p-1"><X size={16}/></button>
-                                </div>
-                              ) : (
-                                <div>
-                                  <h4 className="text-white font-medium truncate max-w-[300px]">{m.title}</h4>
-                                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">XProzess-Modell</p>
-                                </div>
-                              )}
-                            </div>
+                              {editingId === m.id ? (
+                                <div className="flex gap-2 w-full mr-4">
+                                  <input 
+                                    value={newName} 
+                                    onChange={e => setNewName(e.target.value)}
+                                    className="bg-slate-950 border border-blue-500 rounded px-2 py-1 text-sm flex-1 text-white focus:outline-none"
+                                    autoFocus
+                                  />
+                                  <button onClick={() => handleRename(m.id)} className="text-green-500 p-1"><Check size={16}/></button>
+                                  <button onClick={() => setEditingId(null)} className="text-red-500 p-1"><X size={16}/></button>
+                                </div>
+                              ) : (
+                                <div>
+                                  <h4 className="text-white font-medium truncate max-w-[300px]">{m.title}</h4>
+                                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">XProzess-Modell</p>
+                                </div>
+                              )}
+                            </div>
                             
-                            <div className="flex gap-2">
-                              {!editingId && (
-                                <button 
-                                  onClick={() => { setEditingId(m.id); setNewName(m.title); }}
-                                  className="p-2 text-slate-500 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all"
-                                >
-                                  <Edit2 size={16}/>
-                                </button>
-                              )}
-                              <button onClick={() => deleteMuster(m.id)} className="p-2 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">
-                                <Trash2 size={18}/>
-                              </button>
-                    </div>
-                        );
-                      })
-                    ) : (
-                      <div className="text-center py-12 text-slate-600 border border-dashed border-slate-800 rounded-lg">
-                        <Database size={40} className="mx-auto mb-3 opacity-20" />
-                        <p className="text-sm italic">Noch keine Musterprozesse in der Datenbank vorhanden.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
+                            <div className="flex gap-2">
+                              {!editingId && (
+                                <button 
+                                  onClick={() => { setEditingId(m.id); setNewName(m.title); }}
+                                  className="p-2 text-slate-500 hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all"
+                                >
+                                  <Edit2 size={16}/>
+                                </button>
+                              )}
+                              <button onClick={() => deleteMuster(m.id)} className="p-2 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">
+                                <Trash2 size={18}/>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 text-slate-600 border border-dashed border-slate-800 rounded-lg">
+                        <Database size={40} className="mx-auto mb-3 opacity-20" />
+                        <p className="text-sm italic">Noch keine Musterprozesse in der Datenbank vorhanden.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               {activeTab === 'generation' && (
                 <div className="space-y-8 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8"><div className="lg:col-span-1 space-y-6"><div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl"><h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2"><Settings size={20} className="text-blue-400" /> Einstellungen</h3><div className="space-y-5"><div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Prozessname</label><input type="text" value={genTitle} onChange={(e) => setGenTitle(e.target.value)} placeholder="z.B. Antrag auf Baugenehmigung" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none" /></div><div><div className="flex justify-between items-end mb-2"><label className="block text-xs font-medium text-slate-400 uppercase">Quelltexte (PDF, JSON)</label><span className="text-xs text-slate-500">{genFiles.length} Datei(en)</span></div><div className="bg-slate-950 border border-slate-700 rounded-lg overflow-hidden">{genFiles.map((file, index) => (<div key={index} className="flex items-center justify-between p-2 border-b border-slate-800 bg-slate-900/50 text-xs"><div className="flex items-center gap-2 truncate max-w-[85%]"><FileIcon fileName={file.name} size={12} className="text-blue-400 flex-shrink-0" /><span className="truncate text-slate-300" title={file.name}>{file.name}</span></div><button onClick={() => removeGenFile(index)} className="text-slate-500 hover:text-red-400"><X size={12} /></button></div>))}<div className="relative p-3 text-center hover:bg-slate-800 transition cursor-pointer border-t border-slate-800 border-dashed"><input type="file" accept=".pdf,.json,.md,.txt" multiple onChange={handleGenFileSelect} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" /><div className="flex items-center justify-center gap-2 text-slate-500 text-xs"><Plus size={14} /> Dateien hinzufügen</div></div></div></div><div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Kontext / Hinweise</label><div className="relative"><MessageSquare size={14} className="absolute top-3 left-3 text-slate-600" /><textarea value={genNotes} onChange={(e) => setGenNotes(e.target.value)} placeholder="Z.B. Fokus auf Fristen..." className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-white text-xs focus:border-blue-500 focus:outline-none min-h-[80px]" /></div></div><button onClick={handleGenerate} disabled={isGenerating || !genTitle || genFiles.length === 0} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20">{isGenerating ? <Clock size={18} className="animate-spin" /> : <Play size={18} fill="currentColor" />}{isGenerating ? 'KI arbeitet...' : 'Modell generieren'}</button></div></div>{generationError && (<div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-lg text-xs flex items-start gap-3"><AlertCircle size={16} className="flex-shrink-0 mt-0.5" /><div>{generationError}</div></div>)}</div><div className="lg:col-span-2 flex flex-col h-[700px]"><div className="bg-slate-900 border border-slate-800 rounded-xl p-1 shadow-xl flex-1 flex flex-col"><div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900 rounded-t-xl"><h3 className="text-lg font-semibold text-white flex items-center gap-2"><FileJson size={20} className="text-green-400" /> Generiertes Modell</h3>{generatedXml && (<div className="flex gap-2"><button className="text-xs flex items-center gap-1 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded text-slate-300 transition border border-slate-700"><Maximize2 size={14} /> Fullscreen</button><a href={`data:application/xml;charset=utf-8,${encodeURIComponent(generatedXml)}`} download={`${genTitle}.bpmn`} className="text-xs flex items-center gap-1 bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded text-white transition shadow-md"><Download size={14} /> Download BPMN</a></div>)}</div><div className="flex-1 bg-slate-950 relative overflow-hidden flex items-center justify-center rounded-b-lg">{isGenerating ? (<div className="text-center max-w-xs"><div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-6"></div><h4 className="text-white font-medium mb-2">Generierung läuft...</h4><p className="text-slate-500 text-xs leading-relaxed">Die KI analysiert die {genFiles.length} Dokumente, sucht nach ähnlichen Referenzprozessen in der Datenbank und erstellt das BPMN-Modell.</p></div>) : generatedXml ? (<div className="w-full h-full bg-white animate-in fade-in duration-500"><BpmnVisu xml={generatedXml} /></div>) : (<div className="text-slate-600 text-sm text-center px-8 opacity-50"><FileJson size={64} className="mx-auto mb-4 text-slate-700" /><p>Hier erscheint das generierte Prozessmodell.</p></div>)}</div></div>{generatedModels.length > 0 && (<div className="mt-6"><h4 className="text-sm font-medium text-slate-400 uppercase mb-3">Verlauf dieser Sitzung</h4><div className="space-y-2">{generatedModels.map(model => (<div key={model.id} className="bg-slate-900 border border-slate-800 p-3 rounded-lg flex justify-between items-center hover:bg-slate-800 transition cursor-pointer" onClick={() => setGeneratedXml(null)}><div className="flex items-center gap-3"><CheckCircle size={16} className="text-green-500" /><div><div className="text-white text-sm font-medium">{model.name}</div><div className="text-slate-500 text-xs">{model.source} • {model.createdAt}</div></div></div><button className="p-2 text-slate-500 hover:text-white"><Download size={16} /></button></div>))}</div></div>)}</div></div>
               )}
