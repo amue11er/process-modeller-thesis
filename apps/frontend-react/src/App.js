@@ -94,65 +94,77 @@ export default function ProcessModeller() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // --- STATE: VIEW MANAGEMENT (Neu für Datenbank) ---
-  const [currentView, setCurrentView] = useState('modeller'); // 'modeller' | 'history'
+  // --- STATE: VIEW MANAGEMENT ---
+  const [currentView, setCurrentView] = useState('modeller'); 
   const [activeTab, setActiveTab] = useState('activities');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // --- STATE: MUSTERPROZESSE TAB ---
-  const [patternFiles, setPatternFiles] = useState([]);
+  // --- STATE: MUSTERPROZESSE ---
   const [isUploadingPattern, setIsUploadingPattern] = useState(false);
   const [patternName, setPatternName] = useState('');
-
   const [xProcessFile, setXProcessFile] = useState(null);
   const [visualPdfFile, setVisualPdfFile] = useState(null);
-
   const [musterList, setMusterList] = useState([]);
+  const [isLoadingMuster, setIsLoadingMuster] = useState(false);
+
+  const fetchMuster = async () => {
+    setIsLoadingMuster(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/get_musterprozesse`);
+      if (response.ok) {
+        const data = await response.json();
+        setMusterList(data);
+      }
+    } catch (error) {
+      console.error("Fehler beim Laden der Muster:", error);
+    } finally {
+      setIsLoadingMuster(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isLoggedIn) fetchMuster();
+  }, [isLoggedIn]);
 
   const handleUploadPattern = async () => {
-  // Prüfung: Name und die XProzess-Datei müssen vorhanden sein
-  if (!patternName || !xProcessFile) {
-    alert("Bitte mindestens einen Namen und die XProzess-XML auswählen.");
-    return;
-  }
-
-  setIsUploadingPattern(true);
-  try {
-    // Wir nutzen FormData für den kombinierten Upload (XML + PDF)
-    const formData = new FormData();
-    formData.append('title', patternName);
-    formData.append('xprocess', xProcessFile); // Die XML Datei
-    
-    if (visualPdfFile) {
-      formData.append('diagram', visualPdfFile); // Die PDF Datei (optional)
+    if (!patternName || !xProcessFile) {
+      alert("Bitte mindestens einen Namen und die XProzess-XML auswählen.");
+      return;
     }
 
-    const response = await fetch("https://209.38.205.46.nip.io/webhook/insert_musterprozesse", {
-      method: 'POST',
-      // WICHTIG: Bei FormData darf kein 'Content-Type' Header manuell gesetzt werden!
-      body: formData 
-    });
+    setIsUploadingPattern(true);
+    try {
+      const formData = new FormData();
+      formData.append('title', patternName);
+      formData.append('xprocess', xProcessFile);
+      if (visualPdfFile) {
+        formData.append('diagram', visualPdfFile);
+      }
 
-    if (response.ok) {
-      alert("Musterprozess-Paket erfolgreich an n8n gesendet!");
-      // Felder zurücksetzen
-      setPatternName('');
-      setXProcessFile(null);
-      setVisualPdfFile(null);
-      // Hier könntest du später die Liste aktualisieren
-    } else {
-      const errorText = await response.text();
-      throw new Error(`Server-Fehler: ${response.status} - ${errorText}`);
+      const response = await fetch(`${API_BASE_URL}/insert_musterprozesse`, {
+        method: 'POST',
+        body: formData 
+      });
+
+      if (response.ok) {
+        alert("Musterprozess-Paket erfolgreich an n8n gesendet!");
+        setPatternName('');
+        setXProcessFile(null);
+        setVisualPdfFile(null);
+        fetchMuster(); // Liste aktualisieren
+      } else {
+        const errorText = await response.text();
+        throw new Error(`Server-Fehler: ${response.status} - ${errorText}`);
+      }
+    } catch (e) {
+      console.error("Upload-Fehler:", e);
+      alert("Fehler beim Speichern: " + e.message);
+    } finally {
+      setIsUploadingPattern(false);
     }
-  } catch (e) {
-    console.error("Upload-Fehler:", e);
-    alert("Fehler beim Speichern: " + e.message);
-  } finally {
-    setIsUploadingPattern(false);
-  }
-};
+  };
 
-  // --- STATE: HISTORY / DATABASE (Neu) ---
+  // --- STATE: HISTORY / DATABASE ---
   const [historyItems, setHistoryItems] = useState([]);
 
   // --- STATE: TÄTIGKEITSLISTE ---
@@ -183,7 +195,6 @@ export default function ProcessModeller() {
   const [packageTitle, setPackageTitle] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-
   const [documentPairs, setDocumentPairs] = useState([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
@@ -195,7 +206,6 @@ export default function ProcessModeller() {
   useEffect(() => {
     if (isLoggedIn) {
       fetchDocuments();
-      // Load History from LocalStorage
       const savedHistory = localStorage.getItem('dvz_process_history');
       if (savedHistory) {
         try {
@@ -207,22 +217,20 @@ export default function ProcessModeller() {
     }
   }, [isLoggedIn]);
 
-  // Save History to LocalStorage on change
   useEffect(() => {
     if (isLoggedIn) {
       localStorage.setItem('dvz_process_history', JSON.stringify(historyItems));
     }
   }, [historyItems, isLoggedIn]);
 
-  // --- HISTORY HELPERS ---
   const addToHistory = (type, title, data, meta = {}) => {
     const newItem = {
       id: Date.now().toString(),
       date: new Date().toISOString(),
-      type, // 'activity_list' or 'rag_class'
+      type, 
       title: title || "Unbenannt",
       data,
-      meta // speichert Dateiname, Notizen etc.
+      meta 
     };
     setHistoryItems(prev => [newItem, ...prev]);
   };
@@ -238,7 +246,6 @@ export default function ProcessModeller() {
       setServiceName(item.title);
       setExtractedActivities(item.data);
       setUserNotes(item.meta.userNotes || '');
-      // Mock-File Objekt für die Anzeige
       if (item.meta.fileName) {
         setActFiles([{ name: item.meta.fileName + " (aus Verlauf)" }]);
       }
@@ -250,7 +257,7 @@ export default function ProcessModeller() {
       }
       setActiveTab('rag');
     }
-    setCurrentView('modeller'); // Zurück zur Hauptansicht
+    setCurrentView('modeller');
   };
 
   // --- LOGIN & LOGOUT ---
@@ -293,7 +300,6 @@ export default function ProcessModeller() {
     setIsLoadingData(false);
   };
 
-  // --- HANDLER: TÄTIGKEITSLISTE ---
   const handleActFileSelect = (e) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
@@ -311,7 +317,6 @@ export default function ProcessModeller() {
     setIsExtracting(true);
     setExtractedActivities([]);
     try {
-      // Alle Dateien extrahieren und zusammenführen
       let fullText = "";
       for (const file of actFiles) {
         const text = await extractContent(file);
@@ -326,7 +331,6 @@ export default function ProcessModeller() {
         const data = await response.json();
         if (data.activities && Array.isArray(data.activities)) {
           setExtractedActivities(data.activities);
-          // AUTO-SAVE TO DATABASE
           const fileNames = actFiles.map(f => f.name).join(', ');
           addToHistory('activity_list', serviceName, data.activities, { fileName: fileNames, userNotes });
         }
@@ -356,7 +360,6 @@ export default function ProcessModeller() {
     navigator.clipboard.writeText(mdText).then(() => { setIsCopied(true); setTimeout(() => setIsCopied(false), 2000); });
   };
 
-  // --- HANDLER: RAG KLASSIFIZIERUNG ---
   const handleClassifyRag = async () => {
     if (!ragFile) { alert("Bitte Datei auswählen."); return; }
     setIsClassifying(true); setRagResults([]);
@@ -370,7 +373,6 @@ export default function ProcessModeller() {
         const data = await response.json();
         if (data.rag_results && Array.isArray(data.rag_results)) {
           setRagResults(data.rag_results);
-          // AUTO-SAVE TO DATABASE
           addToHistory('rag_class', ragFile.name, data.rag_results, { fileName: ragFile.name });
         }
         else if (Array.isArray(data)) {
@@ -382,7 +384,6 @@ export default function ProcessModeller() {
     setIsClassifying(false);
   };
 
-  // --- HANDLERS: GENERATION ---
   const handleGenFileSelect = (e) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
@@ -425,7 +426,6 @@ export default function ProcessModeller() {
     setIsGenerating(false);
   };
 
-  // --- HANDLERS: ARCHIV ---
   const handlePdfSelect = (e) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files).map(file => ({
@@ -511,13 +511,27 @@ export default function ProcessModeller() {
           <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col shadow-2xl">
             <div className="flex items-center justify-between p-4 border-b border-slate-800">
               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                {previewItem.type === 'xml' ? <FileJson size={20} className="text-green-400" /> : <FileText size={20} className="text-blue-400" />}
+                {previewItem.type === 'xml' ? <FileJson size={20} className="text-green-400" /> : previewItem.type === 'pdf' ? <FileText size={20} className="text-red-400" /> : <FileText size={20} className="text-blue-400" />}
                 {previewItem.title}
               </h3>
               <button onClick={() => setPreviewItem(null)} className="p-2 hover:bg-slate-800 rounded-full transition"><X size={20} /></button>
             </div>
             <div className="flex-1 overflow-hidden bg-slate-950 p-0">
-              {previewItem.type === 'xml' ? (<div className="h-full w-full bg-white overflow-hidden"><BpmnVisu xml={previewItem.content} /></div>) : (<div className="p-6 overflow-y-auto h-full"><pre className="text-xs font-mono text-slate-300 whitespace-pre-wrap leading-relaxed">{previewItem.content}</pre></div>)}
+              {previewItem.type === 'xml' ? (
+                <div className="h-full w-full bg-white overflow-hidden">
+                  <BpmnVisu xml={previewItem.content} />
+                </div>
+              ) : previewItem.type === 'pdf' ? (
+                <iframe
+                  src={`data:application/pdf;base64,${previewItem.content}`}
+                  className="w-full h-full min-h-[600px] border-none"
+                  title="PDF Vorschau"
+                />
+              ) : (
+                <div className="p-6 overflow-y-auto h-full">
+                  <pre className="text-xs font-mono text-slate-300 whitespace-pre-wrap leading-relaxed">{previewItem.content}</pre>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -538,7 +552,6 @@ export default function ProcessModeller() {
         <nav className="flex-1 p-3 space-y-1">
           <NavItem icon={<FileText size={18} />} label="Dokumentation" open={sidebarOpen} onClick={() => setCurrentView('modeller')} active={currentView === 'modeller'} />
           <NavItem icon={<Settings size={18} />} label="Konfiguration" open={sidebarOpen} />
-          {/* NEU: VERLAUF BUTTON */}
           <div className="pt-2">
             <div className={`text-xs uppercase text-slate-500 font-semibold px-3 mb-1 ${!sidebarOpen && 'hidden'}`}>Datenbank</div>
             <NavItem icon={<Database size={18} />} label="Verlauf / Historie" open={sidebarOpen} onClick={() => setCurrentView('history')} active={currentView === 'history'} />
@@ -555,10 +568,8 @@ export default function ProcessModeller() {
         </div>
       </div>
 
-      {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* VIEW: HISTORY / DATABASE */}
         {currentView === 'history' && (
           <div className="flex-1 flex flex-col bg-gray-950 overflow-hidden animate-in fade-in duration-300">
             <div className="bg-slate-900 border-b border-slate-800 px-8 py-6">
@@ -614,7 +625,6 @@ export default function ProcessModeller() {
           </div>
         )}
 
-        {/* VIEW: MODELLER (Standard) */}
         {currentView === 'modeller' && (
           <>
             <div className="bg-slate-900 border-b border-slate-800 px-8 py-6"><h2 className="text-2xl font-semibold text-white tracking-tight">Automatisierte Prozessmodellierung</h2><p className="text-slate-400 text-sm mt-1">Generierung von BPMN 2.0 Modellen aus Rechtstexten</p></div>
@@ -631,10 +641,8 @@ export default function ProcessModeller() {
 
             <main className="flex-1 overflow-y-auto p-8 bg-gray-950">
 
-              {/* --- TAB: TÄTIGKEITSLISTE --- */}
               {activeTab === 'activities' && (
                 <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 h-[750px]">
-                  {/* LINKE SPALTE */}
                   <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl h-full flex flex-col">
                     <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2"><List size={20} className="text-blue-400" /> Extraktion starten</h3>
                     <div className="space-y-6">
@@ -645,7 +653,6 @@ export default function ProcessModeller() {
                       <button onClick={handleExtractActivities} disabled={isExtracting || actFiles.length === 0 || !serviceName} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20 mt-4">{isExtracting ? <Clock size={20} className="animate-spin" /> : <List size={20} />}{isExtracting ? 'Analysiere Dokument...' : 'Tätigkeiten extrahieren'}</button>
                     </div>
                   </div>
-                  {/* RECHTE SPALTE */}
                   <div className="bg-slate-900 border border-slate-800 rounded-xl p-1 shadow-xl h-full flex flex-col">
                     <div className="p-6 border-b border-slate-800 bg-slate-900 rounded-t-xl shrink-0 flex justify-between items-center"><h3 className="text-lg font-semibold text-white flex items-center gap-2"><FileText size={20} className="text-slate-400" /> Tätigkeitsliste</h3>{extractedActivities.length > 0 && (<div className="flex gap-2"><button onClick={handleCopyToClipboard} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg border border-slate-700 transition-colors">{isCopied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}{isCopied ? "Kopiert" : "Kopieren"}</button><button onClick={handleDownloadJSON} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-sm transition-colors"><FileJson size={14} />JSON Export</button></div>)}</div>
                     <div className="flex-1 bg-slate-950 p-6 overflow-auto rounded-b-xl">
@@ -655,10 +662,8 @@ export default function ProcessModeller() {
                 </div>
               )}
 
-              {/* --- TAB: FIM-KLASSIFIZIERUNG (NEU) --- */}
               {activeTab === 'rag' && (
                 <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 h-[750px]">
-                  {/* LINKE SPALTE: UPLOAD */}
                   <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl h-full flex flex-col">
                     <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2"><Tags size={20} className="text-blue-400" /> FIM-Klassifizierung</h3>
                     <div className="space-y-6">
@@ -667,14 +672,13 @@ export default function ProcessModeller() {
                       <button onClick={handleClassifyRag} disabled={isClassifying || !ragFile} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20 mt-4">{isClassifying ? <Clock size={20} className="animate-spin" /> : <Tags size={20} />}{isClassifying ? 'KI klassifiziert Aktivitäten...' : 'RAG-Typen bestimmen'}</button>
                     </div>
                   </div>
-                  {/* RECHTE SPALTE: ERGEBNIS */}
                   <div className="bg-slate-900 border border-slate-800 rounded-xl p-1 shadow-xl h-full flex flex-col">
                     <div className="p-6 border-b border-slate-800 bg-slate-900 rounded-t-xl shrink-0"><h3 className="text-lg font-semibold text-white flex items-center gap-2"><CheckCircle size={20} className="text-green-400" /> Klassifizierte Liste</h3></div>
                     <div className="flex-1 bg-slate-950 p-6 overflow-auto rounded-b-xl">{ragResults && ragResults.length > 0 ? (<div className="space-y-3">{ragResults.map((item, idx) => (<div key={idx} className="bg-slate-900 border border-slate-800 p-4 rounded-lg hover:border-slate-700 transition"><div className="flex justify-between items-start mb-2"><span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold bg-blue-500/10 text-blue-300 border border-blue-500/20"><span className="w-4 h-4 bg-blue-500/20 rounded-full flex items-center justify-center text-[10px]">{item.rag_id}</span>{item.rag_name}</span></div><p className="text-white text-sm mb-2 leading-relaxed">{item.orig_text}</p>{item.reason && (<p className="text-slate-500 text-xs italic border-l-2 border-slate-700 pl-2">KI-Begründung: {item.reason}</p>)}</div>))}</div>) : (<div className="h-full flex flex-col items-center justify-center text-slate-600">{isClassifying ? (<div className="text-center"><Clock size={48} className="mx-auto mb-4 text-blue-500 animate-spin" /><p className="text-slate-400 animate-pulse">Analysiere nach FIM-Standard...</p></div>) : (<div className="text-center opacity-40"><Tags size={64} className="mx-auto mb-4" /><p>Noch keine Klassifizierung.</p></div>)}</div>)}</div>
                   </div>
                 </div>
               )}
-             {/* --- TAB: MUSTERPROZESSE (NEU) --- */}
+
               {activeTab === 'patterns' && (
                 <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-300">
                   <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
@@ -698,7 +702,6 @@ export default function ProcessModeller() {
                     </div>
               
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                      {/* XProzess Upload */}
                       <div>
                         <label className="block text-xs font-medium text-slate-400 uppercase mb-2">XProzess Daten (XML / JSON)</label>
                         <div className="relative border border-dashed border-slate-700 rounded-lg p-4 text-center hover:bg-slate-800 transition cursor-pointer">
@@ -717,7 +720,6 @@ export default function ProcessModeller() {
                         </div>
                       </div>
               
-                      {/* PDF Visualisierung Upload */}
                       <div>
                         <label className="block text-xs font-medium text-slate-400 uppercase mb-2">Visualisierung (PDF)</label>
                         <div className="relative border border-dashed border-slate-700 rounded-lg p-4 text-center hover:bg-slate-800 transition cursor-pointer">
@@ -747,48 +749,47 @@ export default function ProcessModeller() {
                     </button>
                   </div>
               
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
-          <h3 className="text-sm font-medium text-slate-400 uppercase mb-4">Verfügbare Musterprozesse</h3>
-          
-          {musterList.length > 0 ? (
-            <div className="space-y-3">
-              {musterList.map((m) => (
-                <div key={m.id} className="bg-slate-950 border border-slate-800 p-4 rounded-lg flex justify-between items-center hover:border-slate-700 transition-colors">
-                  <div>
-                    <div className="text-white font-medium">{m.name}</div>
-                    <div className="text-xs text-slate-500 flex items-center gap-2 mt-1">
-                      <span className="flex items-center gap-1"><FileCode size={12} /> XProzess</span>
-                      <span className="flex items-center gap-1"><FileText size={12} /> PDF</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => setPreviewItem({ title: m.name, content: m.pdfUrl, type: 'pdf' })}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-white rounded transition"
-                    >
-                      <Eye size={14} /> Diagramm ansehen
-                    </button>
-                    <button 
-                      className="p-1.5 text-slate-500 hover:text-red-400 transition"
-                      onClick={() => alert("Löschfunktion noch nicht implementiert")}
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+                    <h3 className="text-sm font-medium text-slate-400 uppercase mb-4">Verfügbare Musterprozesse</h3>
+                    
+                    {musterList.length > 0 ? (
+                      <div className="space-y-3">
+                        {musterList.map((m) => (
+                          <div key={m.id} className="bg-slate-950 border border-slate-800 p-4 rounded-lg flex justify-between items-center hover:border-slate-700 transition-colors">
+                            <div>
+                              <div className="text-white font-medium">{m.title}</div>
+                              <div className="text-xs text-slate-500 flex items-center gap-2 mt-1">
+                                <span className="flex items-center gap-1"><FileCode size={12} /> XProzess</span>
+                                <span className="flex items-center gap-1"><FileText size={12} /> PDF</span>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <button 
+                                onClick={() => setPreviewItem({ title: m.title, content: m.pdf_visualisierung, type: 'pdf' })}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-white rounded transition"
+                              >
+                                <Eye size={14} /> Diagramm ansehen
+                              </button>
+                              <button 
+                                className="p-1.5 text-slate-500 hover:text-red-400 transition"
+                                onClick={() => alert("Löschfunktion noch nicht implementiert")}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 text-slate-600 border border-dashed border-slate-800 rounded-lg">
+                        <Database size={40} className="mx-auto mb-3 opacity-20" />
+                        <p className="text-sm italic">Noch keine Musterprozesse in der Datenbank vorhanden.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 text-slate-600 border border-dashed border-slate-800 rounded-lg">
-              <Database size={40} className="mx-auto mb-3 opacity-20" />
-              <p className="text-sm italic">Noch keine Musterprozesse in der Datenbank vorhanden.</p>
-            </div>
-          )}
-        </div>
-      </div>
-    )}
+              )}
 
-              {/* --- ANDERE TABS --- */}
               {activeTab === 'generation' && (
                 <div className="space-y-8 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8"><div className="lg:col-span-1 space-y-6"><div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl"><h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2"><Settings size={20} className="text-blue-400" /> Einstellungen</h3><div className="space-y-5"><div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Prozessname</label><input type="text" value={genTitle} onChange={(e) => setGenTitle(e.target.value)} placeholder="z.B. Antrag auf Baugenehmigung" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none" /></div><div><div className="flex justify-between items-end mb-2"><label className="block text-xs font-medium text-slate-400 uppercase">Quelltexte (PDF, JSON)</label><span className="text-xs text-slate-500">{genFiles.length} Datei(en)</span></div><div className="bg-slate-950 border border-slate-700 rounded-lg overflow-hidden">{genFiles.map((file, index) => (<div key={index} className="flex items-center justify-between p-2 border-b border-slate-800 bg-slate-900/50 text-xs"><div className="flex items-center gap-2 truncate max-w-[85%]"><FileIcon fileName={file.name} size={12} className="text-blue-400 flex-shrink-0" /><span className="truncate text-slate-300" title={file.name}>{file.name}</span></div><button onClick={() => removeGenFile(index)} className="text-slate-500 hover:text-red-400"><X size={12} /></button></div>))}<div className="relative p-3 text-center hover:bg-slate-800 transition cursor-pointer border-t border-slate-800 border-dashed"><input type="file" accept=".pdf,.json,.md,.txt" multiple onChange={handleGenFileSelect} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" /><div className="flex items-center justify-center gap-2 text-slate-500 text-xs"><Plus size={14} /> Dateien hinzufügen</div></div></div></div><div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Kontext / Hinweise</label><div className="relative"><MessageSquare size={14} className="absolute top-3 left-3 text-slate-600" /><textarea value={genNotes} onChange={(e) => setGenNotes(e.target.value)} placeholder="Z.B. Fokus auf Fristen..." className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-white text-xs focus:border-blue-500 focus:outline-none min-h-[80px]" /></div></div><button onClick={handleGenerate} disabled={isGenerating || !genTitle || genFiles.length === 0} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20">{isGenerating ? <Clock size={18} className="animate-spin" /> : <Play size={18} fill="currentColor" />}{isGenerating ? 'KI arbeitet...' : 'Modell generieren'}</button></div></div>{generationError && (<div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-lg text-xs flex items-start gap-3"><AlertCircle size={16} className="flex-shrink-0 mt-0.5" /><div>{generationError}</div></div>)}</div><div className="lg:col-span-2 flex flex-col h-[700px]"><div className="bg-slate-900 border border-slate-800 rounded-xl p-1 shadow-xl flex-1 flex flex-col"><div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900 rounded-t-xl"><h3 className="text-lg font-semibold text-white flex items-center gap-2"><FileJson size={20} className="text-green-400" /> Generiertes Modell</h3>{generatedXml && (<div className="flex gap-2"><button className="text-xs flex items-center gap-1 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded text-slate-300 transition border border-slate-700"><Maximize2 size={14} /> Fullscreen</button><a href={`data:application/xml;charset=utf-8,${encodeURIComponent(generatedXml)}`} download={`${genTitle}.bpmn`} className="text-xs flex items-center gap-1 bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded text-white transition shadow-md"><Download size={14} /> Download BPMN</a></div>)}</div><div className="flex-1 bg-slate-950 relative overflow-hidden flex items-center justify-center rounded-b-lg">{isGenerating ? (<div className="text-center max-w-xs"><div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-6"></div><h4 className="text-white font-medium mb-2">Generierung läuft...</h4><p className="text-slate-500 text-xs leading-relaxed">Die KI analysiert die {genFiles.length} Dokumente, sucht nach ähnlichen Referenzprozessen in der Datenbank und erstellt das BPMN-Modell.</p></div>) : generatedXml ? (<div className="w-full h-full bg-white animate-in fade-in duration-500"><BpmnVisu xml={generatedXml} /></div>) : (<div className="text-slate-600 text-sm text-center px-8 opacity-50"><FileJson size={64} className="mx-auto mb-4 text-slate-700" /><p>Hier erscheint das generierte Prozessmodell.</p></div>)}</div></div>{generatedModels.length > 0 && (<div className="mt-6"><h4 className="text-sm font-medium text-slate-400 uppercase mb-3">Verlauf dieser Sitzung</h4><div className="space-y-2">{generatedModels.map(model => (<div key={model.id} className="bg-slate-900 border border-slate-800 p-3 rounded-lg flex justify-between items-center hover:bg-slate-800 transition cursor-pointer" onClick={() => setGeneratedXml(null)}><div className="flex items-center gap-3"><CheckCircle size={16} className="text-green-500" /><div><div className="text-white text-sm font-medium">{model.name}</div><div className="text-slate-500 text-xs">{model.source} • {model.createdAt}</div></div></div><button className="p-2 text-slate-500 hover:text-white"><Download size={16} /></button></div>))}</div></div>)}</div></div>
               )}
