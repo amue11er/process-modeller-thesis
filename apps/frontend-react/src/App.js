@@ -740,147 +740,133 @@ const handleRename = async (id) => {
               )}
 
               {activeTab === 'patterns' && (
-  <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+  <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
     
-    {/* OBERER BEREICH: Upload & Information */}
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      
-      {/* Upload Karte */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-lg font-bold text-white tracking-tight">FIM Musterprozess</h2>
-            <p className="text-slate-400 text-xs mt-1">Neue XProzess-Logik in DB importieren</p>
-          </div>
-          <div className="p-2 bg-blue-500/10 rounded-lg">
-            <Database size={20} className="text-blue-500" />
-          </div>
+    {/* OBERER BEREICH: Upload (Zentriert und kompakter) */}
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl flex flex-col">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-xl font-bold text-white tracking-tight">FIM Musterprozess hochladen</h2>
+          <p className="text-slate-400 text-sm mt-1">XProzess-XML für die KI-Referenzbibliothek hinzufügen</p>
         </div>
-        
-        <div className="space-y-5">
-          <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Name des Musters</label>
-            <input 
-              type="text" 
-              value={patternName} 
-              onChange={(e) => setPatternName(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder-slate-700" 
-              placeholder="z.B. Standard-Anzeigeverfahren" 
-            />
-          </div>
+        <div className="p-3 bg-blue-500/10 rounded-xl">
+          <Database size={24} className="text-blue-500" />
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Name des Musters</label>
+          <input 
+            type="text" 
+            value={patternName} 
+            onChange={(e) => setPatternName(e.target.value)}
+            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder-slate-700" 
+            placeholder="z.B. Standard-Anzeigeverfahren" 
+          />
+        </div>
 
-          <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">XProzess Daten (XML / JSON)</label>
-            <div className="relative border-2 border-dashed border-slate-800 rounded-xl p-6 text-center hover:bg-slate-800/50 hover:border-slate-700 transition-all cursor-pointer group">
-              <input 
-                type="file" 
-                accept=".xml,.json" 
-                onChange={(e) => setXProcessFile(e.target.files[0])} 
-                className="absolute inset-0 opacity-0 z-10 cursor-pointer" 
-              />
-              <div className="flex flex-col items-center gap-2">
-                <FileCode size={28} className={xProcessFile ? "text-blue-400" : "text-slate-600 group-hover:text-slate-500"} />
-                <span className="text-xs font-medium text-slate-500">
-                  {xProcessFile ? xProcessFile.name : "Datei hierher ziehen oder klicken"}
-                </span>
-              </div>
+        <div>
+          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">XProzess Daten (XML / JSON)</label>
+          <div className="relative border-2 border-dashed border-slate-800 rounded-xl px-4 py-2.5 text-center hover:bg-slate-800/50 hover:border-slate-700 transition-all cursor-pointer group">
+            <input 
+              type="file" 
+              accept=".xml,.json" 
+              onChange={(e) => setXProcessFile(e.target.files[0])} 
+              className="absolute inset-0 opacity-0 z-10 cursor-pointer" 
+            />
+            <div className="flex items-center justify-center gap-3">
+              <FileCode size={20} className={xProcessFile ? "text-blue-400" : "text-slate-600"} />
+              <span className="text-xs font-medium text-slate-500 truncate max-w-[180px]">
+                {xProcessFile ? xProcessFile.name : "Datei auswählen"}
+              </span>
             </div>
           </div>
-
-          <button 
-            onClick={handleUploadPattern}
-            disabled={isUploadingPattern || !patternName || !xProcessFile}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:grayscale shadow-lg shadow-blue-900/20"
-          >
-            {isUploadingPattern ? <RefreshCw size={18} className="animate-spin" /> : <Save size={18} />}
-            {isUploadingPattern ? 'Verarbeite...' : 'Paket speichern'}
-          </button>
         </div>
       </div>
 
-      {/* Info Karte (Rechte Seite) */}
-      <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-8 flex flex-col justify-center relative overflow-hidden">
-        <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-blue-600/5 rounded-full blur-3xl"></div>
-        <div className="relative z-10">
-          <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center mb-6">
-            <HelpCircle size={24} className="text-blue-500" />
-          </div>
-          <h3 className="text-white font-semibold mb-3">Warum Musterprozesse?</h3>
-          <p className="text-slate-400 text-sm leading-relaxed mb-4">
-            Durch das Hinterlegen von Referenzmodellen (z.B. FIM-Stammdatensätze) hilfst du der KI, 
-            die Struktur deiner neuen Gesetze besser zu verstehen.
-          </p>
-          <ul className="text-xs text-slate-500 space-y-2">
-            <li className="flex items-center gap-2"><Check size={14} className="text-green-500" /> Höhere Genauigkeit bei der Extraktion</li>
-            <li className="flex items-center gap-2"><Check size={14} className="text-green-500" /> Automatische Zuordnung von Prozessklassen</li>
-          </ul>
-        </div>
-      </div>
+      <button 
+        onClick={handleUploadPattern}
+        disabled={isUploadingPattern || !patternName || !xProcessFile}
+        className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:grayscale shadow-lg shadow-blue-900/20"
+      >
+        {isUploadingPattern ? <RefreshCw size={18} className="animate-spin" /> : <Save size={18} />}
+        {isUploadingPattern ? 'Muster wird gespeichert...' : 'Musterprozess-Paket speichern'}
+      </button>
     </div>
 
-    {/* UNTERER BEREICH: Liste der Muster */}
+    {/* UNTERER BEREICH: Liste der Muster (Volle Breite) */}
     <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
-      <div className="px-6 py-4 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center">
-        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Bibliothek / Verfügbare Muster</h3>
-        <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded-md">{musterList.length} Einträge</span>
+      <div className="px-8 py-5 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <List size={18} className="text-slate-500" />
+          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">Hinterlegte Musterprozesse</h3>
+        </div>
+        <span className="text-[10px] font-bold bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20">
+          {musterList.length} Referenzmodelle
+        </span>
       </div>
       
-      <div className="p-6">
+      <div className="divide-y divide-slate-800/50">
         {musterList.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {musterList.map(m => (
-              <div key={m.id} className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center justify-between group hover:border-blue-500/40 hover:bg-slate-900/40 transition-all duration-300">
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="w-10 h-10 bg-blue-500/5 border border-blue-500/10 rounded-lg flex items-center justify-center text-blue-500 flex-shrink-0 group-hover:scale-110 transition-transform">
-                    <FileCode size={20}/>
-                  </div>
-                  
-                  {editingId === m.id ? (
-                    <div className="flex gap-2 w-full mr-4">
-                      <input 
-                        value={newName} 
-                        onChange={e => setNewName(e.target.value)}
-                        className="bg-slate-900 border border-blue-500 rounded-lg px-3 py-1 text-sm flex-1 text-white focus:outline-none ring-1 ring-blue-500/20"
-                        autoFocus
-                      />
-                      <button onClick={() => handleRename(m.id)} className="text-green-500 hover:bg-green-500/10 p-1.5 rounded-md"><Check size={18}/></button>
-                      <button onClick={() => setEditingId(null)} className="text-red-500 hover:bg-red-500/10 p-1.5 rounded-md"><X size={18}/></button>
-                    </div>
-                  ) : (
-                    <div className="truncate">
-                      <h4 className="text-slate-200 font-semibold text-sm truncate group-hover:text-white transition-colors">{m.title}</h4>
-                      <p className="text-[9px] text-slate-600 uppercase tracking-widest font-bold mt-0.5">XProzess-Modell</p>
-                    </div>
-                  )}
+          musterList.map(m => (
+            <div key={m.id} className="p-5 flex items-center justify-between group hover:bg-slate-800/30 transition-all duration-200">
+              <div className="flex items-center gap-5 flex-1 min-w-0">
+                <div className="w-12 h-12 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-center text-blue-500 shadow-inner group-hover:border-blue-500/30 transition-colors">
+                  <FileCode size={24}/>
                 </div>
                 
-                <div className="flex gap-1 ml-4">
-                  {!editingId && (
-                    <>
-                      <button 
-                        onClick={() => { setEditingId(m.id); setNewName(m.title); }}
-                        className="p-2 text-slate-600 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all"
-                        title="Umbenennen"
-                      >
-                        <Edit2 size={16}/>
-                      </button>
-                      <button 
-                        onClick={() => deleteMuster(m.id)} 
-                        className="p-2 text-slate-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                        title="Löschen"
-                      >
-                        <Trash2 size={16}/>
-                      </button>
-                    </>
-                  )}
-                </div>
+                {editingId === m.id ? (
+                  <div className="flex gap-3 w-full max-w-xl">
+                    <input 
+                      value={newName} 
+                      onChange={e => setNewName(e.target.value)}
+                      className="bg-slate-950 border border-blue-500 rounded-xl px-4 py-2 text-sm flex-1 text-white focus:outline-none ring-2 ring-blue-500/10"
+                      autoFocus
+                    />
+                    <div className="flex gap-1">
+                      <button onClick={() => handleRename(m.id)} className="text-green-500 hover:bg-green-500/10 p-2 rounded-lg transition-colors"><Check size={20}/></button>
+                      <button onClick={() => setEditingId(null)} className="text-red-500 hover:bg-red-500/10 p-2 rounded-lg transition-colors"><X size={20}/></button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="truncate">
+                    <h4 className="text-slate-200 font-bold text-base truncate group-hover:text-white transition-colors">{m.title}</h4>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black">XProzess</span>
+                      <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
+                      <span className="text-[10px] text-slate-600 font-medium italic">ID: {m.id}</span>
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+              
+              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity ml-4">
+                {!editingId && (
+                  <>
+                    <button 
+                      onClick={() => { setEditingId(m.id); setNewName(m.title); }}
+                      className="p-2.5 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition-all"
+                      title="Name bearbeiten"
+                    >
+                      <Edit2 size={18}/>
+                    </button>
+                    <button 
+                      onClick={() => deleteMuster(m.id)} 
+                      className="p-2.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all"
+                      title="Aus Datenbank löschen"
+                    >
+                      <Trash2 size={18}/>
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          ))
         ) : (
-          <div className="text-center py-16 bg-slate-950/50 rounded-xl border border-dashed border-slate-800">
-            <Database size={48} className="mx-auto mb-4 text-slate-800" />
-            <p className="text-slate-500 text-sm italic">Die Datenbank ist zurzeit leer.</p>
+          <div className="flex flex-col items-center justify-center py-20 text-slate-600 bg-slate-950/20">
+            <Database size={48} className="mb-4 opacity-10" />
+            <p className="text-sm font-medium italic opacity-50">Keine Musterprozesse vorhanden.</p>
           </div>
         )}
       </div>
