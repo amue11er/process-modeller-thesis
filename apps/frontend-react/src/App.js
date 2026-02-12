@@ -107,6 +107,20 @@ export default function ProcessModeller() {
   const [musterList, setMusterList] = useState([]);
   const [isLoadingMuster, setIsLoadingMuster] = useState(false);
 
+  const deleteMuster = async (id) => {
+  if (!window.confirm("Muster wirklich löschen?")) return;
+  try {
+    const response = await fetch(`${API_BASE_URL}/delete_musterprozess?id=${id}`, {
+      method: 'DELETE'
+    });
+    if (response.ok) {
+      fetchMuster(); // Liste neu laden
+    }
+  } catch (error) {
+    console.error("Fehler beim Löschen:", error);
+  }
+};
+
   const fetchMuster = async () => {
     setIsLoadingMuster(true);
     try {
