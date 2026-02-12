@@ -539,7 +539,8 @@ export default function ProcessModeller() {
                 </div>
               ) : previewItem.type === 'pdf' ? (
                 <iframe
-                  src={`data:application/pdf;base64,${previewItem.content}`}
+                  // .replace(/\s/g, '') entfernt ALLE Leerzeichen und Zeilenumbrüche
+                  src={`data:application/pdf;base64,${previewItem.content.replace(/\s/g, '')}`}
                   className="w-full h-full min-h-[600px] border-none"
                   title="PDF Vorschau"
                 />
