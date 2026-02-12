@@ -103,7 +103,6 @@ export default function ProcessModeller() {
   const [isUploadingPattern, setIsUploadingPattern] = useState(false);
   const [patternName, setPatternName] = useState('');
   const [xProcessFile, setXProcessFile] = useState(null);
-  const [visualPdfFile, setVisualPdfFile] = useState(null);
   const [musterList, setMusterList] = useState([]);
   const [isLoadingMuster, setIsLoadingMuster] = useState(false);
 
@@ -153,9 +152,6 @@ export default function ProcessModeller() {
       const formData = new FormData();
       formData.append('title', patternName);
       formData.append('xprocess', xProcessFile);
-      if (visualPdfFile) {
-        formData.append('diagram', visualPdfFile);
-      }
 
       const response = await fetch(`${API_BASE_URL}/insert_musterprozesse`, {
         method: 'POST',
@@ -166,7 +162,6 @@ export default function ProcessModeller() {
         alert("Musterprozess-Paket erfolgreich an n8n gesendet!");
         setPatternName('');
         setXProcessFile(null);
-        setVisualPdfFile(null);
         fetchMuster(); // Liste aktualisieren
       } else {
         const errorText = await response.text();
@@ -737,24 +732,6 @@ export default function ProcessModeller() {
                         </div>
                       </div>
               
-                      <div>
-                        <label className="block text-xs font-medium text-slate-400 uppercase mb-2">Visualisierung (PDF)</label>
-                        <div className="relative border border-dashed border-slate-700 rounded-lg p-4 text-center hover:bg-slate-800 transition cursor-pointer">
-                          <input 
-                            type="file" 
-                            accept=".pdf" 
-                            onChange={(e) => setVisualPdfFile(e.target.files[0])}
-                            className="absolute inset-0 opacity-0 cursor-pointer" 
-                          />
-                          <div className="flex flex-col items-center gap-2">
-                            <FileText size={24} className={visualPdfFile ? "text-red-400" : "text-slate-600"} />
-                            <span className="text-sm text-slate-500">
-                              {visualPdfFile ? visualPdfFile.name : "Diagramm PDF auswählen"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
                     
                     <button 
                       onClick={handleUploadPattern}
@@ -777,16 +754,9 @@ export default function ProcessModeller() {
                               <div className="text-white font-medium">{m.title}</div>
                               <div className="text-xs text-slate-500 flex items-center gap-2 mt-1">
                                 <span className="flex items-center gap-1"><FileCode size={12} /> XProzess</span>
-                                <span className="flex items-center gap-1"><FileText size={12} /> PDF</span>
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <button 
-                                onClick={() => setPreviewItem({ title: m.title, content: m.pdf_visualisierung, type: 'pdf' })}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-white rounded transition"
-                              >
-                                <Eye size={14} /> Diagramm ansehen
-                              </button>
                               <button 
                                 className="p-1.5 text-slate-500 hover:text-red-400 transition"
                                 onClick={() => deleteMuster(m.id)}
