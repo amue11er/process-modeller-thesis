@@ -107,20 +107,6 @@ export default function ProcessModeller() {
   const [musterList, setMusterList] = useState([]);
   const [isLoadingMuster, setIsLoadingMuster] = useState(false);
 
-  const deleteMuster = async (id) => {
-  if (!window.confirm("Muster wirklich löschen?")) return;
-  try {
-    const response = await fetch(`${API_BASE_URL}/delete_musterprozess?id=${id}`, {
-      method: 'DELETE'
-    });
-    if (response.ok) {
-      fetchMuster(); // Liste neu laden
-    }
-  } catch (error) {
-    console.error("Fehler beim Löschen:", error);
-  }
-};
-
   const fetchMuster = async () => {
     setIsLoadingMuster(true);
     try {
@@ -133,6 +119,22 @@ export default function ProcessModeller() {
       console.error("Fehler beim Laden der Muster:", error);
     } finally {
       setIsLoadingMuster(false);
+    }
+  };
+
+  const deleteMuster = async (id) => {
+    if (!window.confirm("Muster wirklich aus der Datenbank löschen?")) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/delete_musterprozess?id=${id}`, {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        fetchMuster(); // Liste neu laden
+      } else {
+        alert("Fehler beim Löschen des Musters.");
+      }
+    } catch (error) {
+      console.error("Fehler beim Löschen:", error);
     }
   };
 
@@ -786,7 +788,7 @@ export default function ProcessModeller() {
                               </button>
                               <button 
                                 className="p-1.5 text-slate-500 hover:text-red-400 transition"
-                                onClick={() => alert("Löschfunktion noch nicht implementiert")}
+                                onClick={() => deleteMuster(m.id)}
                               >
                                 <Trash2 size={16} />
                               </button>
