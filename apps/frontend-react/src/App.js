@@ -263,6 +263,8 @@ const loadFinalizedList = (item) => {
   const [ragResults, setRagResults] = useState([]);
   const [isClassifying, setIsClassifying] = useState(false);
 
+  const [previewItem, setPreviewItem] = useState(null);
+
   // --- STATE: GENERATION TAB ---
   const [genTitle, setGenTitle] = useState('');
   const [genFiles, setGenFiles] = useState([]);
@@ -563,7 +565,7 @@ const moveActivity = (index, direction) => {
         if (rawXml) {
           setGeneratedXml(cleanXmlResponse(rawXml));
           const newModel = { id: Date.now(), name: genTitle, source: `${genFiles.length} Quellen`, createdAt: new Date().toLocaleString('de-DE'), status: 'completed', rating: null, feedback: null };
-          setGeneratedModels([newModel, ...generatedModels]); setAllModels([newModel, ...allModels]);
+          setGeneratedModels([newModel, ...generatedModels]);
         } else throw new Error("Kein XML in Antwort.");
       } else throw new Error("Server Fehler: " + response.status);
     } catch (e) { setGenerationError(e.message); }
@@ -625,9 +627,6 @@ const moveActivity = (index, direction) => {
 };
 
   const filteredDocuments = useMemo(() => documentPairs.filter(doc => doc.title.toLowerCase().includes(searchTerm.toLowerCase())), [documentPairs, searchTerm]);
-  const handleRateModel = (modelId, rating, feedback) => setAllModels(allModels.map(m => m.id === modelId ? { ...m, rating, feedback } : m));
-  const ratedModels = allModels.filter(m => m.rating !== null);
-  const unratedModels = allModels.filter(m => m.rating === null);
 
   // --- LOGIN SCREEN RENDER ---
   if (!isLoggedIn) {
