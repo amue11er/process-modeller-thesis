@@ -807,12 +807,12 @@ const moveActivity = (index, direction) => {
                     onDragStart={() => setDraggedIndex(index)}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => {
-                      const updated = [...extractedActivities];
-                      const itemToMove = updated.splice(draggedIndex, 1)[0];
-                      updated.splice(index, 0, itemToMove);
-                      setExtractedActivities(resequence(updated));
-                      setDraggedIndex(null);
-                    }}
+  const updated = [...extractedActivities];
+  const itemToMove = updated.splice(draggedIndex, 1)[0];
+  updated.splice(index, 0, itemToMove);
+  setExtractedActivities(resequence(updated)); // Korrektur: Nutzt jetzt die Neu-Nummerierung
+  setDraggedIndex(null);
+}}
                     className={`border-b border-slate-800/50 hover:bg-slate-900/60 transition-all cursor-grab active:cursor-grabbing ${draggedIndex === index ? 'opacity-30 bg-blue-500/10' : ''}`}
                   >
                     <td className="p-3 text-center align-middle font-bold text-xs text-blue-400 select-none">
