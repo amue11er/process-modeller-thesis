@@ -830,8 +830,8 @@ const moveActivity = (index, direction) => {
                       value={item.bezeichnung}
                       onChange={(e) => updateActivityField(index, 'bezeichnung', e.target.value)}
                       className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-500/30 rounded px-2 py-1 text-slate-200 resize-none text-sm leading-relaxed overflow-hidden"
-                      // Wir senken den Teiler auf 32 Zeichen, um Puffer für schmale Spalten zu haben
-                      rows={Math.max(1, Math.ceil(item.bezeichnung.length / 32) + (item.bezeichnung.split('\n').length - 1))}
+                      // Wir rechnen jetzt mit 28 Zeichen pro Zeile, damit nichts mehr abgeschnitten wird
+                      rows={Math.max(1, Math.ceil(item.bezeichnung.length / 28) + (item.bezeichnung.split('\n').length - 1))}
                     />
                   </td>
                     <td className="p-2 align-top">
@@ -839,8 +839,8 @@ const moveActivity = (index, direction) => {
                       value={item.handlungsgrundlage}
                       onChange={(e) => updateActivityField(index, 'handlungsgrundlage', e.target.value)}
                       className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-500/30 rounded px-2 py-1 text-slate-500 italic text-xs resize-none overflow-hidden"
-                      // Hier nutzen wir 25 Zeichen als Teiler, da die Spalte schmaler ist
-                      rows={Math.max(1, Math.ceil(item.handlungsgrundlage.length / 25) + (item.handlungsgrundlage.split('\n').length - 1))}
+                      // Da diese Spalte schmaler ist, nutzen wir hier 22 Zeichen als Teiler
+                      rows={Math.max(1, Math.ceil(item.handlungsgrundlage.length / 22) + (item.handlungsgrundlage.split('\n').length - 1))}
                     />
                   </td>
                     <td className="p-2 text-center align-top"><button onClick={() => deleteActivity(index)} className="p-2 text-slate-600 hover:text-red-400 transition-colors"><Trash2 size={16} /></button></td>
