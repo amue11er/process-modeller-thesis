@@ -736,8 +736,8 @@ const handleRename = async (id) => {
             <main className="flex-1 overflow-y-auto p-8 bg-gray-950">
 
               {activeTab === 'activities' && (
-                <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 h-[750px]">
-                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl h-full flex flex-col">
+                <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 h-[800px]">
+                 <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl h-full flex flex-col">
                     <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2"><List size={20} className="text-blue-400" /> Extraktion starten</h3>
                     <div className="space-y-6">
                       <p className="text-slate-400 text-sm">Definieren Sie den Kontext und laden Sie das Gesetz hoch.</p>
@@ -760,7 +760,7 @@ const handleRename = async (id) => {
                       <button onClick={handleExtractActivities} disabled={isExtracting || actFiles.length === 0 || !serviceName} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20 mt-4">{isExtracting ? <Clock size={20} className="animate-spin" /> : <List size={20} />}{isExtracting ? 'Analysiere Dokument...' : 'Tätigkeiten extrahieren'}</button>
                     </div>
                   </div>
-                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-1 shadow-xl h-full flex flex-col">
+                  <div className="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-1 shadow-xl h-full flex flex-col">
                     <div className="p-6 border-b border-slate-800 bg-slate-900 rounded-t-xl shrink-0 flex justify-between items-center"><h3 className="text-lg font-semibold text-white flex items-center gap-2"><FileText size={20} className="text-slate-400" /> Tätigkeitsliste</h3>{extractedActivities.length > 0 && (<div className="flex gap-2">
   <button onClick={handleCopyToClipboard} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg border border-slate-700 transition-colors">{isCopied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}{isCopied ? "Kopiert" : "Kopieren"}</button>
   <button onClick={handleDownloadJSON} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-sm transition-colors"><FileJson size={14} />JSON Export</button>
