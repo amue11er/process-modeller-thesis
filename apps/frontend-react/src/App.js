@@ -782,8 +782,9 @@ const handleRename = async (id) => {
           <th className="p-3 text-center border-b border-slate-800 w-12">OK</th>
           <th className="p-3 text-left border-b border-slate-800 w-12">Nr.</th>
           <th className="p-3 text-left border-b border-slate-800 w-32">Typ</th>
-          <th className="p-3 text-left border-b border-slate-800">Bezeichnung</th>
-          <th className="p-3 text-left border-b border-slate-800">Grundlage</th>
+          <th className="p-3 text-left border-b border-slate-800 w-1/3">Bezeichnung</th>
+          <th className="p-3 text-left border-b border-slate-800 w-1/4">Grundlage</th>
+          <th className="p-3 text-left border-b border-slate-800">Notiz (Optional)</th>
         </tr>
       </thead>
       <tbody className="text-sm">
@@ -800,26 +801,31 @@ const handleRename = async (id) => {
             <td className="p-3 align-top font-mono text-xs text-slate-500">{item.nr}</td>
             <td className="p-3 align-top">
               <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                item.typ === 'Prozessklasse' 
-                  ? 'bg-blue-500/10 text-blue-300 border-blue-500/20' 
-                  : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-              }`}>
-                {item.typ}
-              </span>
+                item.typ === 'Prozessklasse' ? 'bg-blue-500/10 text-blue-300 border-blue-500/20' : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+              }`}>{item.typ}</span>
             </td>
             <td className="p-2 align-top">
               <textarea 
                 value={item.bezeichnung}
                 onChange={(e) => updateActivityField(index, 'bezeichnung', e.target.value)}
-                className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-500/30 rounded px-2 py-1 text-slate-200 resize-none overflow-hidden min-h-[38px] leading-relaxed text-sm"
-                rows={Math.max(1, Math.ceil(item.bezeichnung.length / 40))}
+                className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-500/30 rounded px-2 py-1 text-slate-200 resize-none text-sm leading-relaxed"
+                rows={Math.max(2, Math.ceil(item.bezeichnung.length / 35))}
               />
             </td>
             <td className="p-2 align-top">
-              <input 
+              <textarea 
                 value={item.handlungsgrundlage}
                 onChange={(e) => updateActivityField(index, 'handlungsgrundlage', e.target.value)}
-                className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-500/30 rounded px-2 py-1 text-slate-500 italic text-xs"
+                className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-500/30 rounded px-2 py-1 text-slate-400 italic text-xs resize-none"
+                rows={Math.max(2, Math.ceil(item.handlungsgrundlage.length / 25))}
+              />
+            </td>
+            <td className="p-2 align-top">
+              <textarea 
+                value={item.notiz || ''}
+                onChange={(e) => updateActivityField(index, 'notiz', e.target.value)}
+                placeholder="Grund der Änderung..."
+                className="w-full bg-slate-900/50 border border-transparent focus:border-slate-700 focus:ring-0 rounded px-2 py-1 text-slate-500 text-xs resize-none min-h-[40px]"
               />
             </td>
           </tr>
