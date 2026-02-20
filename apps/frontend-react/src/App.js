@@ -826,17 +826,23 @@ const moveActivity = (index, direction) => {
                       </select>
                     </td>
                     <td className="p-2 align-top">
-                      <textarea value={item.bezeichnung} onChange={(e) => updateActivityField(index, 'bezeichnung', e.target.value)}
-                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-500/30 rounded px-2 py-1 text-slate-200 resize-none text-sm leading-relaxed overflow-hidden"
-                        rows={Math.max(1, Math.ceil(item.bezeichnung.length / 38) + (item.bezeichnung.split('\n').length - 1))}
-                      />
-                    </td>
+                    <textarea 
+                      value={item.bezeichnung}
+                      onChange={(e) => updateActivityField(index, 'bezeichnung', e.target.value)}
+                      className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-500/30 rounded px-2 py-1 text-slate-200 resize-none text-sm leading-relaxed overflow-hidden"
+                      // Wir senken den Teiler auf 32 Zeichen, um Puffer für schmale Spalten zu haben
+                      rows={Math.max(1, Math.ceil(item.bezeichnung.length / 32) + (item.bezeichnung.split('\n').length - 1))}
+                    />
+                  </td>
                     <td className="p-2 align-top">
-                      <textarea value={item.handlungsgrundlage} onChange={(e) => updateActivityField(index, 'handlungsgrundlage', e.target.value)}
-                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-500/30 rounded px-2 py-1 text-slate-500 italic text-xs resize-none overflow-hidden"
-                        rows={Math.max(1, Math.ceil(item.handlungsgrundlage.length / 28) + (item.handlungsgrundlage.split('\n').length - 1))}
-                      />
-                    </td>
+                    <textarea 
+                      value={item.handlungsgrundlage}
+                      onChange={(e) => updateActivityField(index, 'handlungsgrundlage', e.target.value)}
+                      className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-500/30 rounded px-2 py-1 text-slate-500 italic text-xs resize-none overflow-hidden"
+                      // Hier nutzen wir 25 Zeichen als Teiler, da die Spalte schmaler ist
+                      rows={Math.max(1, Math.ceil(item.handlungsgrundlage.length / 25) + (item.handlungsgrundlage.split('\n').length - 1))}
+                    />
+                  </td>
                     <td className="p-2 text-center align-top"><button onClick={() => deleteActivity(index)} className="p-2 text-slate-600 hover:text-red-400 transition-colors"><Trash2 size={16} /></button></td>
                   </tr>
                 ))}
