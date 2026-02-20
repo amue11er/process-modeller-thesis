@@ -219,6 +219,45 @@ const handleRename = async (id) => {
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState(null);
 
+  // --- NEU: STATE & LOGIK FÜR VALIDIERTE LISTEN ---
+const [finalizedLists, setFinalizedLists] = useState([]);
+const [isLoadingFinalized, setIsLoadingFinalized] = useState(false);
+
+const fetchFinalizedLists = async () => {
+  setIsLoadingFinalized(true);
+  try {
+    const response = await fetch(`${API_BASE_URL}/get-finalized-lists`);
+    if (response.ok) {
+      const data = await response.json();
+      setFinalizedLists(Array.isArray(data) ? data : (data.data || []));
+    }
+  } catch (error) {
+    console.error("Fehler beim Laden des Archivs:", error);
+  } finally {
+    setIsLoadingFinalized(false);
+  }
+};
+
+const deleteFinalizedList = async (id) => {
+  if (!window.confirm("Liste unwiderruflich aus der Datenbank löschen?")) return;
+  try {
+    const response = await fetch(`${API_BASE_URL}/delete-finalized-list?id=${id}`, { method: 'DELETE' });
+    if (response.ok) {
+      setFinalizedLists(prev => prev.filter(item => item.id !== id));
+    }
+  } catch (error) {
+    console.error("Fehler beim Löschen:", error);
+  }
+};
+
+const loadFinalizedList = (item) => {
+  // Lädt die Daten aus der DB direkt zurück in den Editor-State
+  setServiceName(item.titel);
+  setUserNotes(item.user_notizen || '');
+  setExtractedActivities(item.liste); 
+  setActiveTab('activities'); // Springt sofort in den Editor
+};
+
   // --- STATE: RAG KLASSIFIZIERUNG ---
   const [ragFile, setRagFile] = useState(null);
   const [ragResults, setRagResults] = useState([]);
@@ -241,10 +280,6 @@ const handleRename = async (id) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [documentPairs, setDocumentPairs] = useState([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
-
-  // --- STATE: QUALITÄTSSICHERUNG TAB ---
-  const [allModels, setAllModels] = useState([]);
-  const [previewItem, setPreviewItem] = useState(null);
 
   // 1. Inhalts-Update für Felder (Textarea / Select)
 const updateActivityField = (index, field, value) => {
@@ -753,7 +788,12 @@ const moveActivity = (index, direction) => {
                 <TabButton label="Modell-Generierung" active={activeTab === 'generation'} onClick={() => setActiveTab('generation')} icon={<Play size={16} />} />
                 <TabButton label="Musterprozesse" active={activeTab === 'patterns'} onClick={() => setActiveTab('patterns')} icon={<Database size={16} />} />
                 <TabButton label="Dokumentenablage" active={activeTab === 'archive'} onClick={() => setActiveTab('archive')} icon={<FileText size={16} />} />
-                <TabButton label="Qualitätssicherung" active={activeTab === 'quality'} onClick={() => setActiveTab('quality')} icon={<CheckCircle size={16} />} />
+                <TabButton 
+  label="Validierte Listen" 
+  active={activeTab === 'final_lists'} 
+  onClick={() => { setActiveTab('final_lists'); fetchFinalizedLists(); }} 
+  icon={<Database size={16} />} 
+/>
               </div>
             </div>
 
@@ -1015,9 +1055,79 @@ const moveActivity = (index, direction) => {
               {activeTab === 'archive' && (
                 <div className="max-w-6xl mx-auto space-y-8"><div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl"><div className="flex items-center justify-between mb-6"><div><h2 className="text-lg font-semibold text-white">Neues Trainings-Paket</h2><p className="text-slate-400 text-sm mt-1">Verknüpfen Sie Gesetzestexte mit einem Referenzmodell.</p></div><span className="px-3 py-1 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-full border border-blue-500/20">RAG Ingestion</span></div><div className="mb-6"><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Titel des Pakets</label><input type="text" value={packageTitle} onChange={(e) => setPackageTitle(e.target.value)} className="w-full bg-slate-950/50 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500" placeholder="z.B. Baugenehmigungsverfahren (LBO M-V)" /></div><div className="grid grid-cols-1 lg:grid-cols-2 gap-8"><div><div className="flex justify-between items-end mb-2"><label className="text-xs font-medium text-slate-400 uppercase">1. Gesetzestexte (Quellen)</label><span className="text-xs text-slate-500">{uploadPdfs.length} Dateien</span></div><div className="bg-slate-950 rounded-lg border border-slate-700 overflow-hidden">{uploadPdfs.map(file => (<div key={file.id} className="p-3 border-b border-slate-800 flex items-center gap-3 hover:bg-slate-900 transition"><FileIcon fileName={file.customName} size={16} className="text-blue-400 flex-shrink-0" /><div className="flex-1 min-w-0"><input type="text" value={file.customName} onChange={(e) => updatePdfName(file.id, e.target.value)} className="bg-transparent border-none text-sm text-white w-full focus:ring-0 p-0" /></div><button onClick={() => removePdf(file.id)} className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-slate-800 rounded"><X size={14} /></button></div>))}<div className="relative p-4 hover:bg-slate-900 transition group cursor-pointer text-center"><input type="file" accept=".pdf,.json,.md,.txt" multiple onChange={handlePdfSelect} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" /><div className="flex items-center justify-center gap-2 text-slate-500 group-hover:text-blue-400"><Upload size={16} /> <span className="text-sm">Dateien hinzufügen...</span></div></div></div></div><div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">2. Referenz-Modell (Ziel)</label><div className={`border-2 border-dashed rounded-lg h-[150px] flex flex-col items-center justify-center relative transition-all ${uploadBpmn ? 'border-green-500/30 bg-green-500/5' : 'border-slate-700 hover:border-slate-600'}`}><input type="file" accept=".bpmn,.xml" onChange={(e) => setUploadBpmn(e.target.files[0])} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />{uploadBpmn ? (<div className="text-center z-20 pointer-events-none"><div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-2"><CheckCircle size={20} className="text-green-400" /></div><p className="text-green-400 font-medium text-sm max-w-[200px] truncate">{uploadBpmn.name}</p></div>) : (<div className="text-center pointer-events-none"><FileJson className="mx-auto text-slate-600 mb-2" size={20} /><p className="text-slate-400 text-sm">BPMN auswählen</p></div>)}</div>{uploadBpmn && <button onClick={() => setUploadBpmn(null)} className="text-xs text-red-400 hover:text-red-300 underline w-full text-right">Entfernen</button>}</div></div><div className="mt-8 pt-6 border-t border-slate-800 flex justify-end"><button onClick={handleUpload} disabled={isUploading} className="bg-blue-600 hover:bg-blue-500 text-white py-2.5 px-6 rounded-lg font-medium transition flex items-center gap-2 shadow-lg disabled:opacity-50">{isUploading ? <Clock size={18} className="animate-spin" /> : <Download size={18} className="rotate-180" />}{isUploading ? 'Speichere...' : 'Paket hochladen'}</button></div></div><div className="space-y-4"><div className="flex justify-between items-center mb-2"><h3 className="text-lg font-semibold text-white flex items-center gap-3">Datenbank Inhalt <button onClick={fetchDocuments} className="text-slate-500 hover:text-white"><RefreshCw size={16} /></button></h3><div className="relative group"><input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Suche..." className="bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:border-blue-500 focus:outline-none w-64" /><Search size={16} className="absolute left-3 top-2.5 text-slate-500" /></div></div>{isLoadingData ? <div className="text-center py-12 text-slate-500"><Clock className="animate-spin mx-auto mb-2" /> Lade Daten...</div> : (<div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden"><table className="w-full text-sm text-left"><thead className="bg-slate-950 text-xs uppercase font-semibold text-slate-500 border-b border-slate-800"><tr><th className="px-6 py-4">Paket</th><th className="px-6 py-4">Modell</th><th className="px-6 py-4">Datum</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-right">Aktionen</th></tr></thead><tbody className="divide-y divide-slate-800">{filteredDocuments.map(doc => (<tr key={doc.id} className="hover:bg-slate-800/30 transition group"><td className="px-6 py-4"><div className="font-medium text-white">{doc.title}</div><div className="text-xs text-slate-500 mt-0.5">{doc.fileCount} Quelldatei(en)</div></td><td className="px-6 py-4"><div className="flex items-center gap-2 text-slate-300 font-mono text-xs bg-slate-800 px-2 py-1 rounded w-fit border border-slate-700"><FileJson size={12} className="text-green-400" /> XML</div></td><td className="px-6 py-4 text-slate-400">{doc.createdAt}</td><td className="px-6 py-4"><span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20"><CheckCircle size={12} /> Indiziert</span></td><td className="px-6 py-4 text-right flex justify-end gap-2"><button onClick={() => setPreviewItem({ title: doc.title, content: doc.raw_text, type: 'text' })} className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded"><FileText size={18} /></button><button onClick={() => setPreviewItem({ title: 'BPMN XML', content: doc.xml_content, type: 'xml' })} className="p-2 text-slate-400 hover:text-green-400 hover:bg-slate-800 rounded"><FileJson size={18} /></button><button onClick={() => handleDeletePair(doc.id)} className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded"><Trash2 size={18} /></button></td></tr>))}</tbody></table>{filteredDocuments.length === 0 && <div className="p-8 text-center text-slate-600 italic">Keine Daten gefunden.</div>}</div>)}</div></div>
               )}
-              {activeTab === 'quality' && (
-                <div className="space-y-6 max-w-4xl">{unratedModels.length > 0 && (<div><h3 className="text-lg font-semibold text-white mb-4">Zu bewertende Modelle ({unratedModels.length})</h3><div className="space-y-4">{unratedModels.map((model) => (<RatingCard key={model.id} model={model} onRate={(rating, feedback) => handleRateModel(model.id, rating, feedback)} />))}</div></div>)}{ratedModels.length > 0 && (<div><h3 className="text-lg font-semibold text-white mb-4">Bewertete Modelle ({ratedModels.length})</h3><div className="space-y-3">{ratedModels.map((model) => (<div key={model.id} className="bg-slate-800 border border-slate-700 rounded-lg p-4"><div className="flex items-start justify-between"><div><p className="text-white font-medium">{model.name}</p><p className="text-slate-400 text-sm">Bewertung: {'★'.repeat(model.rating)}</p>{model.feedback && <p className="text-slate-300 text-sm mt-2">Feedback: {model.feedback}</p>}</div><CheckCircle size={20} className="text-green-500 flex-shrink-0" /></div></div>))}</div></div>)}</div>
-              )}
+              {activeTab === 'final_lists' && (
+  <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500">
+    <div className="flex justify-between items-center mb-4">
+      <h3 className="text-xl font-bold text-white flex items-center gap-3">
+        <Database className="text-blue-500" /> Archivierte Tätigkeitslisten
+        <button onClick={fetchFinalizedLists} className="p-2 text-slate-500 hover:text-white transition-colors">
+          <RefreshCw size={18} className={isLoadingFinalized ? "animate-spin" : ""} />
+        </button>
+      </h3>
+      <span className="text-xs font-bold bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 uppercase tracking-widest">
+        {finalizedLists.length} Einträge
+      </span>
+    </div>
+
+    {isLoadingFinalized ? (
+      <div className="text-center py-24 text-slate-500">
+        <Clock className="animate-spin mx-auto mb-4 opacity-50" size={48} />
+        <p className="animate-pulse">Greife auf Datenbank zu...</p>
+      </div>
+    ) : finalizedLists.length === 0 ? (
+      <div className="text-center py-24 border border-dashed border-slate-800 rounded-2xl bg-slate-900/20">
+        <Database size={64} className="mx-auto mb-4 opacity-10 text-slate-400" />
+        <p className="text-slate-500 italic">Noch keine finalisierten Listen gespeichert.</p>
+      </div>
+    ) : (
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+        <table className="w-full text-sm text-left">
+          <thead className="bg-slate-950 text-[10px] uppercase font-black text-slate-500 border-b border-slate-800 tracking-widest">
+            <tr>
+              <th className="px-8 py-5">Prozess / Leistung</th>
+              <th className="px-8 py-5">Editor</th>
+              <th className="px-8 py-5">Datum</th>
+              <th className="px-8 py-5 text-right">Aktionen</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800/50">
+            {finalizedLists.map(item => (
+              <tr key={item.id} className="hover:bg-slate-800/40 transition group">
+                <td className="px-8 py-5">
+                  <div className="font-bold text-slate-200 group-hover:text-white transition-colors">{item.titel}</div>
+                  <div className="text-[10px] text-slate-500 mt-1 flex items-center gap-1.5 uppercase font-medium">
+                    <List size={10} /> {item.liste.length} Arbeitsschritte
+                  </div>
+                </td>
+                <td className="px-8 py-5 text-slate-400 font-medium">{item.editor || 'System'}</td>
+                <td className="px-8 py-5 text-slate-500">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={14} className="opacity-50" />
+                    {new Date(item.erstellt_am).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </td>
+                <td className="px-8 py-5 text-right space-x-3">
+                  <button 
+                    onClick={() => loadFinalizedList(item)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-blue-900/20"
+                  >
+                    Im Editor öffnen
+                  </button>
+                  <button 
+                    onClick={() => deleteFinalizedList(item.id)}
+                    className="p-2.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+)}
             </main>
           </>
         )}
