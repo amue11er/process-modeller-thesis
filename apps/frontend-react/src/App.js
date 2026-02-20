@@ -99,6 +99,8 @@ export default function ProcessModeller() {
   const [activeTab, setActiveTab] = useState('activities');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  const [previewItem, setPreviewItem] = useState(null);
+
   // --- STATE: MUSTERPROZESSE ---
   const [isUploadingPattern, setIsUploadingPattern] = useState(false);
   const [patternName, setPatternName] = useState('');
@@ -262,8 +264,6 @@ const loadFinalizedList = (item) => {
   const [ragFile, setRagFile] = useState(null);
   const [ragResults, setRagResults] = useState([]);
   const [isClassifying, setIsClassifying] = useState(false);
-
-  const [previewItem, setPreviewItem] = useState(null);
 
   // --- STATE: GENERATION TAB ---
   const [genTitle, setGenTitle] = useState('');
