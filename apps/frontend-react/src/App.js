@@ -252,6 +252,11 @@ const handleRename = async (id) => {
   setExtractedActivities(updated);
 };
 
+  const resequence = (list) => list.map((item, i) => {
+  const { validated, ...rest } = item;
+  return { ...rest, nr: i + 1 };
+});
+
   const toggleActivityValidation = (index) => {
   const updated = [...extractedActivities];
   // Falls n8n das Feld noch nicht liefert, initialisieren wir es
@@ -260,13 +265,15 @@ const handleRename = async (id) => {
 };
 
   const deleteActivity = (index) => {
-  setExtractedActivities(prev => prev.filter((_, i) => i !== index));
+  setExtractedActivities(prev => resequence(prev.filter((_, i) => i !== index)));
 };
 
   const addActivity = () => {
-  const nextNr = extractedActivities.length > 0 
-    ? Math.max(...extractedActivities.map(a => Number(a.nr) || 0)) + 1 
-    : 1;
+  setExtractedActivities(prev => resequence([
+    ...prev, 
+    { typ: 'Aktivitätengruppe', bezeichnung: '', handlungsgrundlage: '' }
+  ]));
+};
 
   const newActivity = {
     nr: nextNr,
@@ -282,9 +289,8 @@ const handleRename = async (id) => {
   const newIndex = index + direction;
   if (newIndex < 0 || newIndex >= extractedActivities.length) return;
   const updated = [...extractedActivities];
-  // Tausche die Positionen im Array
   [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
-  setExtractedActivities(updated);
+  setExtractedActivities(resequence(updated));
 };
 
   const handleFinalizeActivities = async () => {
@@ -767,7 +773,7 @@ const handleRename = async (id) => {
 {activeTab === 'activities' && (
   <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 h-[850px]">
     
-    {/* LINKER CONTAINER: Extraktion & Kontext (1/3) */}
+    {/* LINKER CONTAINER: Alle Eingaben (1/3 Breite) */}
     <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl h-full flex flex-col overflow-y-auto">
       <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
         <List size={20} className="text-blue-400" /> Extraktion starten
@@ -779,7 +785,7 @@ const handleRename = async (id) => {
         </div>
         <div>
           <label className="block text-xs font-medium text-slate-400 uppercase mb-2">Anmerkungen</label>
-          <textarea value={userNotes} onChange={(e) => setUserNotes(e.target.value)} placeholder="Kontext für die KI..." rows={4} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none resize-none transition-colors" />
+          <textarea value={userNotes} onChange={(e) => setUserNotes(e.target.value)} placeholder="Zusätzliche Infos für die KI..." rows={4} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none resize-none transition-colors" />
         </div>
         <div>
           <label className="block text-xs font-medium text-slate-400 uppercase mb-2">Referenz-Musterprozess</label>
@@ -810,12 +816,12 @@ const handleRename = async (id) => {
           </div>
         </div>
         <button onClick={handleExtractActivities} disabled={isExtracting || actFiles.length === 0 || !serviceName} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-blue-900/20">
-          {isExtracting ? <Clock size={20} className="animate-spin" /> : <Play size={20} />} Tätigkeiten extrahieren
+          {isExtracting ? <Clock size={20} className="animate-spin" /> : <Play size={20} />} Extraktion starten
         </button>
       </div>
     </div>
 
-    {/* RECHTER CONTAINER: Experten-Editor mit Drag & Drop (2/3) */}
+    {/* RECHTER CONTAINER: Experten-Editor (2/3 Breite) */}
     <div className="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-1 shadow-xl h-full flex flex-col overflow-hidden">
       <div className="p-6 border-b border-slate-800 bg-slate-900 rounded-t-xl shrink-0 flex justify-between items-center">
         <h3 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -823,22 +829,13 @@ const handleRename = async (id) => {
         </h3>
         <div className="flex gap-2">
           <button onClick={addActivity} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors"><Plus size={14} /> Zeile hinzufügen</button>
-          <button onClick={handleDownloadJSON} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors"><Download size={14} /> JSON Export</button>
-          <button 
-            onClick={async () => {
-              // Beim Finalisieren Nr neu mappen und 'validated' entfernen
-              const cleanedData = extractedActivities.map((item, i) => ({
-                nr: i + 1,
-                typ: item.typ,
-                bezeichnung: item.bezeichnung,
-                handlungsgrundlage: item.handlungsgrundlage
-              }));
-              setExtractedActivities(cleanedData);
-              handleFinalizeActivities(); 
-            }} 
-            disabled={isFinalizing} 
-            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-green-600 hover:bg-green-500 rounded-lg shadow-lg shadow-green-900/20 transition-all disabled:opacity-50"
-          >
+          
+          {/* JSON DOWNLOAD (Nutzt den aktuellen, bereinigten State) */}
+          <button onClick={handleDownloadJSON} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors">
+            <Download size={14} /> JSON Export
+          </button>
+
+          <button onClick={handleFinalizeActivities} disabled={isFinalizing} className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-green-600 hover:bg-green-500 rounded-lg shadow-lg transition-all">
             {isFinalizing ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />} Finalisieren
           </button>
         </div>
@@ -850,7 +847,7 @@ const handleRename = async (id) => {
             <table className="w-full border-collapse text-slate-300">
               <thead className="bg-slate-900 sticky top-0 z-10 text-[10px] font-bold uppercase text-slate-400 tracking-wider">
                 <tr>
-                  <th className="p-3 text-center border-b border-slate-800 w-12">Nr</th>
+                  <th className="p-3 text-center border-b border-slate-800 w-12 text-blue-500">Nr</th>
                   <th className="p-3 text-left border-b border-slate-800 w-40">Typ</th>
                   <th className="p-3 text-left border-b border-slate-800">Bezeichnung</th>
                   <th className="p-3 text-left border-b border-slate-800 w-1/4">Grundlage</th>
@@ -868,18 +865,19 @@ const handleRename = async (id) => {
                       const updated = [...extractedActivities];
                       const itemToMove = updated.splice(draggedIndex, 1)[0];
                       updated.splice(index, 0, itemToMove);
-                      setExtractedActivities(updated);
+                      setExtractedActivities(resequence(updated));
                       setDraggedIndex(null);
                     }}
                     className={`border-b border-slate-800/50 hover:bg-slate-900/60 transition-all cursor-grab active:cursor-grabbing ${draggedIndex === index ? 'opacity-30 bg-blue-500/10' : ''}`}
                   >
-                    {/* Dynamische Nr-Anzeige */}
-                    <td className="p-3 text-center align-middle font-mono text-xs text-slate-500 select-none">
+                    {/* Index Nummer (Aus dem Objektwert 'nr') */}
+                    <td className="p-3 text-center align-middle font-bold text-xs text-blue-400 select-none">
                       <div className="flex items-center justify-center gap-2">
-                         <Menu size={12} className="text-slate-700" /> {index + 1}
+                         <Menu size={12} className="text-slate-700" /> {item.nr}
                       </div>
                     </td>
 
+                    {/* Farblich unterschiedener Typ */}
                     <td className="p-3 align-top">
                       <select 
                         value={item.typ} 
@@ -893,7 +891,7 @@ const handleRename = async (id) => {
                       </select>
                     </td>
 
-                    {/* Bezeichnung mit Auto-Höhe */}
+                    {/* Bezeichnung (Auto-Höhe ohne Scrolling) */}
                     <td className="p-2 align-top">
                       <textarea 
                         value={item.bezeichnung}
@@ -903,7 +901,7 @@ const handleRename = async (id) => {
                       />
                     </td>
 
-                    {/* Grundlage mit Auto-Höhe */}
+                    {/* Grundlage (Auto-Höhe) */}
                     <td className="p-2 align-top">
                       <textarea 
                         value={item.handlungsgrundlage}
@@ -913,6 +911,7 @@ const handleRename = async (id) => {
                       />
                     </td>
 
+                    {/* Löschen */}
                     <td className="p-2 text-center align-top">
                       <button onClick={() => deleteActivity(index)} className="p-2 text-slate-600 hover:text-red-400 transition-colors"><Trash2 size={16} /></button>
                     </td>
