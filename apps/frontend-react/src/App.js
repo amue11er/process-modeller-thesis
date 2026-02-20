@@ -216,6 +216,7 @@ const handleRename = async (id) => {
   const [serviceName, setServiceName] = useState('');
   const [userNotes, setUserNotes] = useState('');
   const [isCopied, setIsCopied] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
 
   // --- STATE: RAG KLASSIFIZIERUNG ---
   const [ragFile, setRagFile] = useState(null);
@@ -243,6 +244,48 @@ const handleRename = async (id) => {
   // --- STATE: QUALITÄTSSICHERUNG TAB ---
   const [allModels, setAllModels] = useState([]);
   const [previewItem, setPreviewItem] = useState(null);
+
+  const updateActivityField = (index, field, value) => {
+  const updated = [...extractedActivities];
+  updated[index][field] = value;
+  setExtractedActivities(updated);
+};
+
+  const toggleActivityValidation = (index) => {
+  const updated = [...extractedActivities];
+  // Falls n8n das Feld noch nicht liefert, initialisieren wir es
+  updated[index].validated = !updated[index].validated;
+  setExtractedActivities(updated);
+};
+
+  const handleFinalizeActivities = async () => {
+  if (extractedActivities.length === 0) return;
+  setIsFinalizing(true);
+  try {
+    const response = await fetch(`${API_BASE_URL}/finalize-activities`, { // Neuer n8n-Endpunkt
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        serviceName,
+        userNotes,
+        finalActivities: extractedActivities,
+        finalizedAt: new Date().toISOString(),
+        editor: "Arvid Müller"
+      })
+    });
+    if (response.ok) {
+      alert("Tätigkeitsliste wurde erfolgreich finalisiert und abgelegt!");
+      // Optional: In Historie speichern
+      addToHistory('activity_list', serviceName + " (Final)", extractedActivities, { userNotes, status: 'finalized' });
+    } else {
+      throw new Error("Fehler beim Senden an den Webhook");
+    }
+  } catch (e) {
+    alert("Fehler: " + e.message);
+  } finally {
+    setIsFinalizing(false);
+  }
+};
 
   // --- INITIAL LOAD & HISTORY ---
   useEffect(() => {
@@ -718,10 +761,87 @@ const handleRename = async (id) => {
                     </div>
                   </div>
                   <div className="bg-slate-900 border border-slate-800 rounded-xl p-1 shadow-xl h-full flex flex-col">
-                    <div className="p-6 border-b border-slate-800 bg-slate-900 rounded-t-xl shrink-0 flex justify-between items-center"><h3 className="text-lg font-semibold text-white flex items-center gap-2"><FileText size={20} className="text-slate-400" /> Tätigkeitsliste</h3>{extractedActivities.length > 0 && (<div className="flex gap-2"><button onClick={handleCopyToClipboard} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg border border-slate-700 transition-colors">{isCopied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}{isCopied ? "Kopiert" : "Kopieren"}</button><button onClick={handleDownloadJSON} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-sm transition-colors"><FileJson size={14} />JSON Export</button></div>)}</div>
-                    <div className="flex-1 bg-slate-950 p-6 overflow-auto rounded-b-xl">
-                      {extractedActivities && extractedActivities.length > 0 ? (<div className="overflow-hidden rounded-lg border border-slate-700"><table style={{ width: '100%', borderCollapse: 'collapse', color: '#cbd5e1' }}><thead style={{ backgroundColor: '#1e293b', textTransform: 'uppercase', fontSize: '0.75rem', fontWeight: 'bold', color: '#f1f5f9', position: 'sticky', top: 0, zIndex: 10 }}><tr><th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #334155', backgroundColor: '#1e293b' }}>Nr.</th><th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #334155', backgroundColor: '#1e293b' }}>Typ</th><th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #334155', backgroundColor: '#1e293b' }}>Bezeichnung</th><th style={{ padding: '12px 16px', textAlign: 'left', borderBottom: '1px solid #334155', backgroundColor: '#1e293b' }}>Grundlage</th></tr></thead><tbody style={{ fontSize: '0.875rem' }}>{extractedActivities.map((item, index) => (<tr key={index} style={{ borderBottom: '1px solid #334155', transition: 'background-color 0.2s' }} className="hover:bg-slate-800"><td style={{ padding: '12px 16px', verticalAlign: 'top', color: '#fff', fontWeight: '500' }}>{item.nr}</td><td style={{ padding: '12px 16px', verticalAlign: 'top' }}><span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', backgroundColor: item.typ === 'Prozessklasse' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(16, 185, 129, 0.2)', color: item.typ === 'Prozessklasse' ? '#bfdbfe' : '#a7f3d0', border: item.typ === 'Prozessklasse' ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)', whiteSpace: 'nowrap' }}>{item.typ}</span></td><td style={{ padding: '12px 16px', verticalAlign: 'top', lineHeight: '1.5' }}>{item.bezeichnung}</td><td style={{ padding: '12px 16px', verticalAlign: 'top', fontStyle: 'italic', color: '#94a3b8' }}>{item.handlungsgrundlage}</td></tr>))}</tbody></table></div>) : (<div className="h-full flex flex-col items-center justify-center text-slate-600">{isExtracting ? (<div className="text-center"><Clock size={48} className="mx-auto mb-4 text-blue-500 animate-spin" /><p className="text-slate-400 animate-pulse">Analysiere Dokument...</p></div>) : (<div className="text-center opacity-40"><List size={64} className="mx-auto mb-4" /><p>Noch keine Ergebnisse.</p></div>)}</div>)}
-                    </div>
+                    <div className="p-6 border-b border-slate-800 bg-slate-900 rounded-t-xl shrink-0 flex justify-between items-center"><h3 className="text-lg font-semibold text-white flex items-center gap-2"><FileText size={20} className="text-slate-400" /> Tätigkeitsliste</h3>{extractedActivities.length > 0 && (<div className="flex gap-2">
+  <button onClick={handleCopyToClipboard} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg border border-slate-700 transition-colors">{isCopied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}{isCopied ? "Kopiert" : "Kopieren"}</button>
+  <button onClick={handleDownloadJSON} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-sm transition-colors"><FileJson size={14} />JSON Export</button>
+  {/* NEUER BUTTON */}
+  <button 
+    onClick={handleFinalizeActivities} 
+    disabled={isFinalizing}
+    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-green-600 hover:bg-green-500 rounded-lg shadow-lg shadow-green-900/20 transition-all disabled:opacity-50"
+  >
+    {isFinalizing ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+    {isFinalizing ? "Speichere..." : "Finalisieren"}
+  </button>
+</div>)}</div>
+                   {extractedActivities && extractedActivities.length > 0 ? (
+  <div className="overflow-hidden rounded-lg border border-slate-700">
+    <table className="w-full border-collapse text-slate-300">
+      <thead className="bg-slate-900 sticky top-0 z-10 text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+        <tr>
+          <th className="p-3 text-center border-b border-slate-800 w-12">OK</th>
+          <th className="p-3 text-left border-b border-slate-800 w-12">Nr.</th>
+          <th className="p-3 text-left border-b border-slate-800 w-32">Typ</th>
+          <th className="p-3 text-left border-b border-slate-800">Bezeichnung</th>
+          <th className="p-3 text-left border-b border-slate-800">Grundlage</th>
+        </tr>
+      </thead>
+      <tbody className="text-sm">
+        {extractedActivities.map((item, index) => (
+          <tr key={index} className={`border-b border-slate-800/50 transition-colors ${item.validated ? 'bg-green-500/5' : 'hover:bg-slate-800/30'}`}>
+            <td className="p-3 text-center">
+              <input 
+                type="checkbox" 
+                checked={item.validated || false} 
+                onChange={() => toggleActivityValidation(index)}
+                className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+              />
+            </td>
+            <td className="p-3 align-top font-mono text-xs text-slate-500">{item.nr}</td>
+            <td className="p-3 align-top">
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                item.typ === 'Prozessklasse' 
+                  ? 'bg-blue-500/10 text-blue-300 border-blue-500/20' 
+                  : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+              }`}>
+                {item.typ}
+              </span>
+            </td>
+            <td className="p-2 align-top">
+              <textarea 
+                value={item.bezeichnung}
+                onChange={(e) => updateActivityField(index, 'bezeichnung', e.target.value)}
+                className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-500/30 rounded px-2 py-1 text-slate-200 resize-none overflow-hidden min-h-[38px] leading-relaxed text-sm"
+                rows={Math.max(1, Math.ceil(item.bezeichnung.length / 40))}
+              />
+            </td>
+            <td className="p-2 align-top">
+              <input 
+                value={item.handlungsgrundlage}
+                onChange={(e) => updateActivityField(index, 'handlungsgrundlage', e.target.value)}
+                className="w-full bg-transparent border-none focus:ring-1 focus:ring-blue-500/30 rounded px-2 py-1 text-slate-500 italic text-xs"
+              />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+) : (
+  <div className="h-full flex flex-col items-center justify-center text-slate-600">
+    {isExtracting ? (
+      <div className="text-center">
+        <Clock size={48} className="mx-auto mb-4 text-blue-500 animate-spin" />
+        <p className="text-slate-400 animate-pulse font-medium">Analysiere Rechtsgrundlagen...</p>
+      </div>
+    ) : (
+      <div className="text-center opacity-40">
+        <List size={64} className="mx-auto mb-4" />
+        <p>Keine Tätigkeiten geladen.</p>
+      </div>
+    )}
+  </div>
+)}
                   </div>
                 </div>
               )}
