@@ -274,6 +274,20 @@ const loadFinalizedList = (item) => {
   const [generationError, setGenerationError] = useState(null);
   const [generatedModels, setGeneratedModels] = useState([]);
 
+  // --- NEU: XPROZESS METADATEN ---
+  const [katalogName, setKatalogName] = useState('Prozesskatalog M-V');
+  const [bibliothekName, setBibliothekName] = useState('Prozessbibliothek');
+  const [prozessId, setProzessId] = useState('');
+  const [freigebendeStelle, setFreigebendeStelle] = useState('');
+  const [ordnungsrahmen, setOrdnungsrahmen] = useState('FIM');
+  const [klassenname, setKlassenname] = useState('');
+  const [detLevel, setDetLevel] = useState('105');
+  const [selectedStates, setSelectedStates] = useState(['13']); // Standard MV
+  
+  // State für die Rückmeldung (Human-in-the-Loop)
+  const [steckbriefDraft, setSteckbriefDraft] = useState(null);
+  const [isWaitingForReview, setIsWaitingForReview] = useState(false);
+
   // --- STATE: ARCHIV / UPLOAD TAB ---
   const [uploadPdfs, setUploadPdfs] = useState([]);
   const [uploadBpmn, setUploadBpmn] = useState(null);
@@ -570,6 +584,58 @@ const moveActivity = (index, direction) => {
       } else throw new Error("Server Fehler: " + response.status);
     } catch (e) { setGenerationError(e.message); }
     setIsGenerating(false);
+  };
+
+  const handleGenerateSteckbrief = async () => {
+    if (!genTitle || genFiles.length === 0) {
+      alert("Bitte Titel und Gesetze angeben.");
+      return;
+    }
+    setIsGenerating(true);
+    setSteckbriefDraft(null);
+
+    try {
+      const formData = new FormData();
+      
+      // 1. Dateien (Gesetze) anhängen
+      genFiles.forEach((f) => formData.append('files', f));
+
+      // 2. Tätigkeitsliste anhängen (aus dem Editor-State)
+      formData.append('taetigkeitsliste', JSON.stringify(extractedActivities));
+
+      // 3. Alle Metadaten verpacken
+      const metadata = {
+        titel: genTitle,
+        prozessId: prozessId || `ID_${Date.now()}`,
+        katalog: katalogName,
+        bibliothek: bibliothekName,
+        freigebendeStelle: freigebendeStelle,
+        ordnungsrahmen: ordnungsrahmen,
+        klasse: klassenname,
+        detaillierungsstufe: detLevel,
+        verwaltungspolitischeKodierung: selectedStates,
+        notizen: genNotes
+      };
+      formData.append('metadaten', JSON.stringify(metadata));
+
+      const response = await fetch(`${API_BASE_URL}/generate-steckbrief`, {
+        method: 'POST',
+        body: formData, // Browser setzt Content-Type automatisch auf multipart/form-data
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Hier kommt das JSON vom Agenten zurück für den Review
+        setSteckbriefDraft(data);
+        setIsWaitingForReview(true);
+      } else {
+        throw new Error("Fehler beim n8n-Aufruf");
+      }
+    } catch (e) {
+      alert("Fehler: " + e.message);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handlePdfSelect = (e) => {
@@ -1048,7 +1114,210 @@ const moveActivity = (index, direction) => {
   </div>
 )}
               {activeTab === 'generation' && (
-                <div className="space-y-8 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8"><div className="lg:col-span-1 space-y-6"><div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl"><h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2"><Settings size={20} className="text-blue-400" /> Einstellungen</h3><div className="space-y-5"><div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Prozessname</label><input type="text" value={genTitle} onChange={(e) => setGenTitle(e.target.value)} placeholder="z.B. Antrag auf Baugenehmigung" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none" /></div><div><div className="flex justify-between items-end mb-2"><label className="block text-xs font-medium text-slate-400 uppercase">Quelltexte (PDF, JSON)</label><span className="text-xs text-slate-500">{genFiles.length} Datei(en)</span></div><div className="bg-slate-950 border border-slate-700 rounded-lg overflow-hidden">{genFiles.map((file, index) => (<div key={index} className="flex items-center justify-between p-2 border-b border-slate-800 bg-slate-900/50 text-xs"><div className="flex items-center gap-2 truncate max-w-[85%]"><FileIcon fileName={file.name} size={12} className="text-blue-400 flex-shrink-0" /><span className="truncate text-slate-300" title={file.name}>{file.name}</span></div><button onClick={() => removeGenFile(index)} className="text-slate-500 hover:text-red-400"><X size={12} /></button></div>))}<div className="relative p-3 text-center hover:bg-slate-800 transition cursor-pointer border-t border-slate-800 border-dashed"><input type="file" accept=".pdf,.json,.md,.txt" multiple onChange={handleGenFileSelect} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" /><div className="flex items-center justify-center gap-2 text-slate-500 text-xs"><Plus size={14} /> Dateien hinzufügen</div></div></div></div><div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Kontext / Hinweise</label><div className="relative"><MessageSquare size={14} className="absolute top-3 left-3 text-slate-600" /><textarea value={genNotes} onChange={(e) => setGenNotes(e.target.value)} placeholder="Z.B. Fokus auf Fristen..." className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-white text-xs focus:border-blue-500 focus:outline-none min-h-[80px]" /></div></div><button onClick={handleGenerate} disabled={isGenerating || !genTitle || genFiles.length === 0} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20">{isGenerating ? <Clock size={18} className="animate-spin" /> : <Play size={18} fill="currentColor" />}{isGenerating ? 'KI arbeitet...' : 'Modell generieren'}</button></div></div>{generationError && (<div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-lg text-xs flex items-start gap-3"><AlertCircle size={16} className="flex-shrink-0 mt-0.5" /><div>{generationError}</div></div>)}</div><div className="lg:col-span-2 flex flex-col h-[700px]"><div className="bg-slate-900 border border-slate-800 rounded-xl p-1 shadow-xl flex-1 flex flex-col"><div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900 rounded-t-xl"><h3 className="text-lg font-semibold text-white flex items-center gap-2"><FileJson size={20} className="text-green-400" /> Generiertes Modell</h3>{generatedXml && (<div className="flex gap-2"><button className="text-xs flex items-center gap-1 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded text-slate-300 transition border border-slate-700"><Maximize2 size={14} /> Fullscreen</button><a href={`data:application/xml;charset=utf-8,${encodeURIComponent(generatedXml)}`} download={`${genTitle}.bpmn`} className="text-xs flex items-center gap-1 bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded text-white transition shadow-md"><Download size={14} /> Download BPMN</a></div>)}</div><div className="flex-1 bg-slate-950 relative overflow-hidden flex items-center justify-center rounded-b-lg">{isGenerating ? (<div className="text-center max-w-xs"><div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-6"></div><h4 className="text-white font-medium mb-2">Generierung läuft...</h4><p className="text-slate-500 text-xs leading-relaxed">Die KI analysiert die {genFiles.length} Dokumente, sucht nach ähnlichen Referenzprozessen in der Datenbank und erstellt das BPMN-Modell.</p></div>) : generatedXml ? (<div className="w-full h-full bg-white animate-in fade-in duration-500"><BpmnVisu xml={generatedXml} /></div>) : (<div className="text-slate-600 text-sm text-center px-8 opacity-50"><FileJson size={64} className="mx-auto mb-4 text-slate-700" /><p>Hier erscheint das generierte Prozessmodell.</p></div>)}</div></div>{generatedModels.length > 0 && (<div className="mt-6"><h4 className="text-sm font-medium text-slate-400 uppercase mb-3">Verlauf dieser Sitzung</h4><div className="space-y-2">{generatedModels.map(model => (<div key={model.id} className="bg-slate-900 border border-slate-800 p-3 rounded-lg flex justify-between items-center hover:bg-slate-800 transition cursor-pointer" onClick={() => setGeneratedXml(null)}><div className="flex items-center gap-3"><CheckCircle size={16} className="text-green-500" /><div><div className="text-white text-sm font-medium">{model.name}</div><div className="text-slate-500 text-xs">{model.source} • {model.createdAt}</div></div></div><button className="p-2 text-slate-500 hover:text-white"><Download size={16} /></button></div>))}</div></div>)}</div></div>
+                <div className="space-y-8 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8"><div className="lg:col-span-1 space-y-6 overflow-y-auto pr-2" style={{ maxHeight: '800px' }}>
+  <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+      <Settings size={20} className="text-blue-400" /> XProzess Konfiguration
+    </h3>
+    
+    <div className="space-y-4">
+      {/* Basis Daten */}
+      <div>
+        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Prozessname & ID</label>
+        <input type="text" value={genTitle} onChange={(e) => setGenTitle(e.target.value)} placeholder="Name der Leistung" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm mb-2" />
+        <input type="text" value={prozessId} onChange={(e) => setProzessId(e.target.value)} placeholder="Prozess-ID (optional)" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm" />
+      </div>
+
+      {/* Katalog & Struktur */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Katalog</label>
+          <input type="text" value={katalogName} onChange={(e) => setKatalogName(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs" />
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Bibliothek</label>
+          <input type="text" value={bibliothekName} onChange={(e) => setBibliothekName(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs" />
+        </div>
+      </div>
+
+      {/* FIM Einordnung */}
+      <div>
+        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Fachliche Freigabe & Klasse</label>
+        <input type="text" value={freigebendeStelle} onChange={(e) => setFreigebendeStelle(e.target.value)} placeholder="z.B. Ministerium für Inneres" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs mb-2" />
+        <input type="text" value={klassenname} onChange={(e) => setKlassenname(e.target.value)} placeholder="Klassenname" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs" />
+      </div>
+
+      {/* Detaillierungsstufe Dropdown */}
+      <div>
+        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Detaillierungsstufe</label>
+        <select value={detLevel} onChange={(e) => setDetLevel(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm">
+          <option value="101">101 - Bund</option>
+          <option value="102">102 - Land</option>
+          <option value="103">103 - Kommune</option>
+          <option value="104">104 - Prozessklasse</option>
+          <option value="105">105 - Musterinformation (Stammtext)</option>
+        </select>
+      </div>
+
+      {/* Datei-Sektion (bereits vorhanden, leicht angepasst) */}
+      <div>
+        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Gesetzestexte</label>
+        <div className="bg-slate-950 border border-slate-700 rounded-lg p-2">
+          {genFiles.map((f, i) => (
+            <div key={i} className="flex justify-between text-[10px] text-slate-300 p-1 border-b border-slate-800 last:border-0">
+              <span className="truncate">{f.name}</span>
+              <X size={12} className="cursor-pointer" onClick={() => removeGenFile(i)} />
+            </div>
+          ))}
+          <div className="relative mt-2 p-2 border border-dashed border-slate-700 rounded text-center text-[10px] text-slate-500">
+            <input type="file" multiple onChange={handleGenFileSelect} className="absolute inset-0 opacity-0" />
+            + Dateien hinzufügen
+          </div>
+        </div>
+      </div>
+
+      <button 
+        onClick={handleGenerateSteckbrief} 
+        disabled={isGenerating} 
+        className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20"
+      >
+        {isGenerating ? <Clock size={20} className="animate-spin" /> : <Play size={20} />}
+        Steckbrief generieren
+      </button>
+    </div>
+  </div>
+</div><div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl"><h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2"><Settings size={20} className="text-blue-400" /> Einstellungen</h3><div className="space-y-5"><div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Prozessname</label><input type="text" value={genTitle} onChange={(e) => setGenTitle(e.target.value)} placeholder="z.B. Antrag auf Baugenehmigung" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none" /></div><div><div className="flex justify-between items-end mb-2"><label className="block text-xs font-medium text-slate-400 uppercase">Quelltexte (PDF, JSON)</label><span className="text-xs text-slate-500">{genFiles.length} Datei(en)</span></div><div className="bg-slate-950 border border-slate-700 rounded-lg overflow-hidden">{genFiles.map((file, index) => (<div key={index} className="flex items-center justify-between p-2 border-b border-slate-800 bg-slate-900/50 text-xs"><div className="flex items-center gap-2 truncate max-w-[85%]"><FileIcon fileName={file.name} size={12} className="text-blue-400 flex-shrink-0" /><span className="truncate text-slate-300" title={file.name}>{file.name}</span></div><button onClick={() => removeGenFile(index)} className="text-slate-500 hover:text-red-400"><X size={12} /></button></div>))}<div className="relative p-3 text-center hover:bg-slate-800 transition cursor-pointer border-t border-slate-800 border-dashed"><input type="file" accept=".pdf,.json,.md,.txt" multiple onChange={handleGenFileSelect} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" /><div className="flex items-center justify-center gap-2 text-slate-500 text-xs"><Plus size={14} /> Dateien hinzufügen</div></div></div></div><div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Kontext / Hinweise</label><div className="relative"><MessageSquare size={14} className="absolute top-3 left-3 text-slate-600" /><textarea value={genNotes} onChange={(e) => setGenNotes(e.target.value)} placeholder="Z.B. Fokus auf Fristen..." className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-white text-xs focus:border-blue-500 focus:outline-none min-h-[80px]" /></div></div><button onClick={handleGenerate} disabled={isGenerating || !genTitle || genFiles.length === 0} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20">{isGenerating ? <Clock size={18} className="animate-spin" /> : <Play size={18} fill="currentColor" />}{isGenerating ? 'KI arbeitet...' : 'Modell generieren'}</button></div></div>{generationError && (<div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-lg text-xs flex items-start gap-3"><AlertCircle size={16} className="flex-shrink-0 mt-0.5" /><div>{generationError}</div></div>)}</div>{/* RECHTE SPALTE: BPMN-Viewer ODER Review-Maske */}
+<div className="lg:col-span-8 flex flex-col h-[850px]">
+  <div className="bg-slate-900 border border-slate-800 rounded-xl p-1 shadow-xl flex-1 flex flex-col overflow-hidden">
+    
+    {/* HEADER: Umschalter & Aktionen */}
+    <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900 rounded-t-xl shrink-0">
+      <div className="flex gap-6">
+        <button 
+          onClick={() => setIsReviewing(false)} 
+          className={`text-sm font-bold flex items-center gap-2 transition-colors ${!isReviewing ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}
+        >
+          <Maximize2 size={16} /> BPMN Modell
+        </button>
+        
+        {steckbriefDraft && (
+          <button 
+            onClick={() => setIsReviewing(true)} 
+            className={`text-sm font-bold flex items-center gap-2 transition-colors ${isReviewing ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}
+          >
+            <Edit2 size={16} /> Steckbrief-Review 
+            <span className="bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full border border-blue-500/30">KI</span>
+          </button>
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        {generatedXml && (
+          <a 
+            href={`data:application/xml;charset=utf-8,${encodeURIComponent(generatedXml)}`} 
+            download={`${genTitle || 'Prozessmodell'}.bpmn`}
+            className="text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded text-slate-300 transition border border-slate-700"
+          >
+            <Download size={14} /> BPMN
+          </a>
+        )}
+      </div>
+    </div>
+
+    {/* CONTENT BEREICH: Dynamischer Wechsel basierend auf isReviewing */}
+    <div className="flex-1 bg-slate-950 relative overflow-hidden flex flex-col rounded-b-lg">
+      
+      {isGenerating ? (
+        /* LOADING ANZEIGE */
+        <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
+          <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-6"></div>
+          <h4 className="text-white font-medium mb-2 text-lg">XProzess-Modellierung läuft...</h4>
+          <p className="text-slate-500 text-sm max-w-sm leading-relaxed">
+            Der KI-Agent führt die Mikro-Analyse der Handlungsgrundlagen durch und erstellt den BPMN-Entwurf sowie den Steckbrief.
+          </p>
+        </div>
+      ) : isReviewing && steckbriefDraft ? (
+        /* REVIEW MASKE (Human-in-the-Loop) */
+        <div className="flex-1 flex flex-col overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex-1 overflow-y-auto p-8 space-y-8">
+            
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Inhaltliche Definition</label>
+                <span className="text-[10px] text-slate-600 italic">KI-Vorschlag</span>
+              </div>
+              <textarea 
+                value={steckbriefDraft.definition} 
+                onChange={(e) => setSteckbriefDraft({...steckbriefDraft, definition: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-sm text-white h-28 focus:border-blue-500/50 outline-none transition-all resize-none shadow-inner"
+              />
+            </section>
+
+            <section className="space-y-4">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Prozessbeschreibung (Zusammenfassung)</label>
+              <textarea 
+                value={steckbriefDraft.beschreibung} 
+                onChange={(e) => setSteckbriefDraft({...steckbriefDraft, beschreibung: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-sm text-white h-44 focus:border-blue-500/50 outline-none transition-all resize-none shadow-inner"
+              />
+            </section>
+
+            <section className="space-y-4">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Identifizierte Akteure</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {steckbriefDraft.prozessteilnehmer?.map((tp, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 bg-slate-900/50 border border-slate-800 rounded-lg">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">
+                      <User size={14} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-200">{tp.name}</div>
+                      <div className="text-[10px] text-slate-500">Rolle: {tp.rolle?.code || '4'}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <div className="p-6 bg-slate-900 border-t border-slate-800 flex gap-4 shrink-0">
+            <button 
+              className="flex-1 bg-green-600 hover:bg-green-500 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-900/20 transition-all active:scale-[0.98]"
+              onClick={() => { console.log("Finalisierte Daten:", steckbriefDraft); }}
+            >
+              <Save size={18} /> Daten übernehmen & Finalisieren
+            </button>
+            <button 
+              onClick={() => setIsReviewing(false)}
+              className="px-8 py-3.5 border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl font-medium transition-all"
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* BPMN VISUALISIERUNG (Standard View) */
+        <div className="w-full h-full flex flex-col bg-white">
+          {generatedXml ? (
+            <div className="w-full h-full animate-in fade-in duration-700">
+              <BpmnVisu xml={generatedXml} />
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-600 p-20 text-center">
+              <div className="w-20 h-20 bg-slate-900 rounded-3xl flex items-center justify-center mb-6 border border-slate-800 shadow-xl">
+                <FileJson size={40} className="text-slate-700" />
+              </div>
+              <h4 className="text-slate-400 font-medium mb-2">Kein Modell geladen</h4>
+              <p className="text-slate-600 text-xs max-w-[240px] leading-relaxed">
+                Klicken Sie links auf "Modell generieren", um die Analyse zu starten.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  </div>
+</div>
               )}
               
               {activeTab === 'archive' && (
