@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 // NEU: 'Database' und 'Calendar' Icons hinzugefügt
-import { Upload, FileText, Settings, HelpCircle, Menu, X, Download, Trash2, CheckCircle, Clock, Eye, Search, Edit2, FileJson, RefreshCw, Play, Maximize2, Plus, MessageSquare, Save, AlertCircle, List, Copy, Check, LogOut, User, Lock, Tags, FileCode, FileType, Database, Calendar } from 'lucide-react';
+import { Upload, FileText, Settings, HelpCircle, Menu, X, Download, Trash2, CheckCircle, Clock, Eye, Search, Edit2, FileJson, RefreshCw, Play, Plus, Save, AlertCircle, List, Copy, Check, LogOut, User, Lock, Tags, FileCode, FileType, Database, Calendar } from 'lucide-react';
 
 // --- BPMN Viewer ---
 import BpmnViewer from 'bpmn-js/lib/NavigatedViewer';
@@ -268,11 +268,22 @@ const loadFinalizedList = (item) => {
   // --- STATE: GENERATION TAB ---
   const [genTitle, setGenTitle] = useState('');
   const [genFiles, setGenFiles] = useState([]);
-  const [genNotes, setGenNotes] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedXml, setGeneratedXml] = useState(null);
   const [generationError, setGenerationError] = useState(null);
   const [generatedModels, setGeneratedModels] = useState([]);
+
+  // --- STATE: XPROZESS METADATEN ---
+  const [katalogName, setKatalogName] = useState('Prozesskatalog M-V');
+  const [bibliothekName, setBibliothekName] = useState('Prozessbibliothek');
+  const [prozessId, setProzessId] = useState('');
+  const [freigebendeStelle, setFreigebendeStelle] = useState('');
+  const [ordnungsrahmen] = useState('FIM');
+  const [klassenname, setKlassenname] = useState('');
+  const [detLevel, setDetLevel] = useState('105');
+  const [selectedStates] = useState(['13']);
+  const [steckbriefDraft, setSteckbriefDraft] = useState(null);
+  const [isReviewing, setIsReviewing] = useState(false);
 
   // --- STATE: ARCHIV / UPLOAD TAB ---
   const [uploadPdfs, setUploadPdfs] = useState([]);
@@ -544,20 +555,52 @@ const moveActivity = (index, direction) => {
 
   const removeGenFile = (i) => setGenFiles(prev => prev.filter((_, index) => index !== i));
 
+  const handleFinalizeSteckbrief = async () => {
+    if (!steckbriefDraft) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/finalize-steckbrief`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: genTitle,
+          steckbrief: steckbriefDraft,
+          bpmn_xml: generatedXml,
+          finalizedAt: new Date().toISOString()
+        })
+      });
+      if (response.ok) {
+        alert("Steckbrief wurde erfolgreich finalisiert und gespeichert!");
+      } else {
+        throw new Error("Fehler beim Speichern: " + response.status);
+      }
+    } catch (e) {
+      alert("Fehler: " + e.message);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!genTitle || genFiles.length === 0) { alert("Bitte Titel und mindestens eine Datei angeben."); return; }
-    setIsGenerating(true); setGeneratedXml(null); setGenerationError(null);
+    setIsGenerating(true); setGeneratedXml(null); setGenerationError(null); setSteckbriefDraft(null);
     try {
-      let fullQueryText = "";
-      if (genNotes) fullQueryText += `ZUSÄTZLICHE HINWEISE: ${genNotes}\n\n`;
-      fullQueryText += "BASIS-DOKUMENTE:\n";
+      const formData = new FormData();
       for (const file of genFiles) {
-        const text = await extractContent(file);
-        fullQueryText += `\n--- QUELLE: ${file.name} ---\n${text}\n`;
+        formData.append('files', file);
       }
+      formData.append('taetigkeitsliste', JSON.stringify(extractedActivities));
+      formData.append('metadaten', JSON.stringify({
+        title: genTitle,
+        prozessId,
+        katalogName,
+        bibliothekName,
+        freigebendeStelle,
+        ordnungsrahmen,
+        klassenname,
+        detLevel,
+        selectedStates,
+      }));
       const response = await fetch(`${API_BASE_URL}/generate`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: genTitle, query: fullQueryText })
+        method: 'POST',
+        body: formData
       });
       if (response.ok) {
         const data = await response.json();
@@ -567,6 +610,9 @@ const moveActivity = (index, direction) => {
           const newModel = { id: Date.now(), name: genTitle, source: `${genFiles.length} Quellen`, createdAt: new Date().toLocaleString('de-DE'), status: 'completed', rating: null, feedback: null };
           setGeneratedModels([newModel, ...generatedModels]);
         } else throw new Error("Kein XML in Antwort.");
+        if (data.steckbrief || data.json) {
+          setSteckbriefDraft(data.steckbrief || data.json);
+        }
       } else throw new Error("Server Fehler: " + response.status);
     } catch (e) { setGenerationError(e.message); }
     setIsGenerating(false);
@@ -1048,7 +1094,118 @@ const moveActivity = (index, direction) => {
   </div>
 )}
               {activeTab === 'generation' && (
-                <div className="space-y-8 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8"><div className="lg:col-span-1 space-y-6"><div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl"><h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2"><Settings size={20} className="text-blue-400" /> Einstellungen</h3><div className="space-y-5"><div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Prozessname</label><input type="text" value={genTitle} onChange={(e) => setGenTitle(e.target.value)} placeholder="z.B. Antrag auf Baugenehmigung" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none" /></div><div><div className="flex justify-between items-end mb-2"><label className="block text-xs font-medium text-slate-400 uppercase">Quelltexte (PDF, JSON)</label><span className="text-xs text-slate-500">{genFiles.length} Datei(en)</span></div><div className="bg-slate-950 border border-slate-700 rounded-lg overflow-hidden">{genFiles.map((file, index) => (<div key={index} className="flex items-center justify-between p-2 border-b border-slate-800 bg-slate-900/50 text-xs"><div className="flex items-center gap-2 truncate max-w-[85%]"><FileIcon fileName={file.name} size={12} className="text-blue-400 flex-shrink-0" /><span className="truncate text-slate-300" title={file.name}>{file.name}</span></div><button onClick={() => removeGenFile(index)} className="text-slate-500 hover:text-red-400"><X size={12} /></button></div>))}<div className="relative p-3 text-center hover:bg-slate-800 transition cursor-pointer border-t border-slate-800 border-dashed"><input type="file" accept=".pdf,.json,.md,.txt" multiple onChange={handleGenFileSelect} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" /><div className="flex items-center justify-center gap-2 text-slate-500 text-xs"><Plus size={14} /> Dateien hinzufügen</div></div></div></div><div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Kontext / Hinweise</label><div className="relative"><MessageSquare size={14} className="absolute top-3 left-3 text-slate-600" /><textarea value={genNotes} onChange={(e) => setGenNotes(e.target.value)} placeholder="Z.B. Fokus auf Fristen..." className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-white text-xs focus:border-blue-500 focus:outline-none min-h-[80px]" /></div></div><button onClick={handleGenerate} disabled={isGenerating || !genTitle || genFiles.length === 0} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20">{isGenerating ? <Clock size={18} className="animate-spin" /> : <Play size={18} fill="currentColor" />}{isGenerating ? 'KI arbeitet...' : 'Modell generieren'}</button></div></div>{generationError && (<div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-lg text-xs flex items-start gap-3"><AlertCircle size={16} className="flex-shrink-0 mt-0.5" /><div>{generationError}</div></div>)}</div><div className="lg:col-span-2 flex flex-col h-[700px]"><div className="bg-slate-900 border border-slate-800 rounded-xl p-1 shadow-xl flex-1 flex flex-col"><div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900 rounded-t-xl"><h3 className="text-lg font-semibold text-white flex items-center gap-2"><FileJson size={20} className="text-green-400" /> Generiertes Modell</h3>{generatedXml && (<div className="flex gap-2"><button className="text-xs flex items-center gap-1 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded text-slate-300 transition border border-slate-700"><Maximize2 size={14} /> Fullscreen</button><a href={`data:application/xml;charset=utf-8,${encodeURIComponent(generatedXml)}`} download={`${genTitle}.bpmn`} className="text-xs flex items-center gap-1 bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded text-white transition shadow-md"><Download size={14} /> Download BPMN</a></div>)}</div><div className="flex-1 bg-slate-950 relative overflow-hidden flex items-center justify-center rounded-b-lg">{isGenerating ? (<div className="text-center max-w-xs"><div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-6"></div><h4 className="text-white font-medium mb-2">Generierung läuft...</h4><p className="text-slate-500 text-xs leading-relaxed">Die KI analysiert die {genFiles.length} Dokumente, sucht nach ähnlichen Referenzprozessen in der Datenbank und erstellt das BPMN-Modell.</p></div>) : generatedXml ? (<div className="w-full h-full bg-white animate-in fade-in duration-500"><BpmnVisu xml={generatedXml} /></div>) : (<div className="text-slate-600 text-sm text-center px-8 opacity-50"><FileJson size={64} className="mx-auto mb-4 text-slate-700" /><p>Hier erscheint das generierte Prozessmodell.</p></div>)}</div></div>{generatedModels.length > 0 && (<div className="mt-6"><h4 className="text-sm font-medium text-slate-400 uppercase mb-3">Verlauf dieser Sitzung</h4><div className="space-y-2">{generatedModels.map(model => (<div key={model.id} className="bg-slate-900 border border-slate-800 p-3 rounded-lg flex justify-between items-center hover:bg-slate-800 transition cursor-pointer" onClick={() => setGeneratedXml(null)}><div className="flex items-center gap-3"><CheckCircle size={16} className="text-green-500" /><div><div className="text-white text-sm font-medium">{model.name}</div><div className="text-slate-500 text-xs">{model.source} • {model.createdAt}</div></div></div><button className="p-2 text-slate-500 hover:text-white"><Download size={16} /></button></div>))}</div></div>)}</div></div>
+                <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+                  {/* LINKE SPALTE: Konfiguration */}
+                  <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl flex flex-col gap-4 overflow-y-auto">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2"><Settings size={20} className="text-blue-400" /> Konfiguration</h3>
+
+                    <div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Prozessname *</label><input type="text" value={genTitle} onChange={(e) => setGenTitle(e.target.value)} placeholder="z.B. Antrag auf Baugenehmigung" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none" /></div>
+
+                    <div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Prozess-ID</label><input type="text" value={prozessId} onChange={(e) => setProzessId(e.target.value)} placeholder="z.B. P-001" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none" /></div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Katalog</label><input type="text" value={katalogName} onChange={(e) => setKatalogName(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none" /></div>
+                      <div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Bibliothek</label><input type="text" value={bibliothekName} onChange={(e) => setBibliothekName(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none" /></div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Freigebende Stelle</label><input type="text" value={freigebendeStelle} onChange={(e) => setFreigebendeStelle(e.target.value)} placeholder="z.B. Landesamt" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none" /></div>
+                      <div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Klassenname</label><input type="text" value={klassenname} onChange={(e) => setKlassenname(e.target.value)} placeholder="z.B. Verwaltung" className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none" /></div>
+                    </div>
+
+                    <div><label className="block text-xs font-medium text-slate-400 uppercase mb-2">Detaillierungsgrad</label><select value={detLevel} onChange={(e) => setDetLevel(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"><option value="101">101</option><option value="102">102</option><option value="105">105</option></select></div>
+
+                    <div>
+                      <div className="flex justify-between items-end mb-2"><label className="block text-xs font-medium text-slate-400 uppercase">Quelldokumente (PDF)</label><span className="text-xs text-slate-500">{genFiles.length} Datei(en)</span></div>
+                      <div className="bg-slate-950 border border-slate-700 rounded-lg overflow-hidden">
+                        {genFiles.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between p-2 border-b border-slate-800 bg-slate-900/50 text-xs">
+                            <div className="flex items-center gap-2 truncate max-w-[85%]"><FileIcon fileName={file.name} size={12} className="text-blue-400 flex-shrink-0" /><span className="truncate text-slate-300" title={file.name}>{file.name}</span></div>
+                            <button onClick={() => removeGenFile(index)} className="text-slate-500 hover:text-red-400"><X size={12} /></button>
+                          </div>
+                        ))}
+                        <div className="relative p-3 text-center hover:bg-slate-800 transition cursor-pointer border-t border-slate-800 border-dashed"><input type="file" accept=".pdf,.json,.md,.txt" multiple onChange={handleGenFileSelect} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" /><div className="flex items-center justify-center gap-2 text-slate-500 text-xs"><Plus size={14} /> Dateien hinzufügen</div></div>
+                      </div>
+                    </div>
+
+                    {generationError && (<div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg text-xs flex items-start gap-2"><AlertCircle size={14} className="flex-shrink-0 mt-0.5" /><div>{generationError}</div></div>)}
+
+                    <button onClick={handleGenerate} disabled={isGenerating || !genTitle || genFiles.length === 0} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20 mt-auto">{isGenerating ? <Clock size={18} className="animate-spin" /> : <Play size={18} fill="currentColor" />}{isGenerating ? 'KI arbeitet...' : 'Modell generieren'}</button>
+                  </div>
+
+                  {/* RECHTE SPALTE: Viewer / Review */}
+                  <div className="lg:col-span-8 flex flex-col h-[780px]">
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-xl flex-1 flex flex-col overflow-hidden">
+
+                      {/* Header mit Toggle-Buttons */}
+                      <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900 rounded-t-xl shrink-0">
+                        <div className="flex gap-2">
+                          <button onClick={() => setIsReviewing(false)} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-2 ${!isReviewing ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'}`}><FileJson size={15} /> BPMN Modell</button>
+                          {steckbriefDraft && (
+                            <button onClick={() => setIsReviewing(true)} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-2 ${isReviewing ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'}`}><FileText size={15} /> Steckbrief-Review</button>
+                          )}
+                        </div>
+                        {!isReviewing && generatedXml && (
+                          <div className="flex gap-2">
+                            <a href={`data:application/xml;charset=utf-8,${encodeURIComponent(generatedXml)}`} download={`${genTitle}.bpmn`} className="text-xs flex items-center gap-1 bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded text-white transition shadow-md"><Download size={14} /> Download BPMN</a>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Content-Bereich */}
+                      <div className="flex-1 overflow-hidden relative">
+                        {!isReviewing ? (
+                          /* Modus: BPMN Viewer */
+                          <div className="w-full h-full bg-slate-950 flex items-center justify-center">
+                            {isGenerating ? (
+                              <div className="text-center max-w-xs">
+                                <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-6"></div>
+                                <h4 className="text-white font-medium mb-2">Generierung läuft...</h4>
+                                <p className="text-slate-500 text-xs leading-relaxed">Die KI analysiert die {genFiles.length} Dokumente und erstellt das BPMN-Modell und den Steckbrief.</p>
+                              </div>
+                            ) : generatedXml ? (
+                              <div className="w-full h-full bg-white animate-in fade-in duration-500"><BpmnVisu xml={generatedXml} /></div>
+                            ) : (
+                              <div className="text-slate-600 text-sm text-center px-8 opacity-50"><FileJson size={64} className="mx-auto mb-4 text-slate-700" /><p>Hier erscheint das generierte Prozessmodell.</p></div>
+                            )}
+                          </div>
+                        ) : (
+                          /* Modus: Steckbrief-Review */
+                          <div className="w-full h-full overflow-y-auto p-6 bg-slate-950 space-y-5">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-400 uppercase mb-2">Definition</label>
+                              <textarea
+                                value={steckbriefDraft?.definition || ''}
+                                onChange={(e) => setSteckbriefDraft(prev => ({ ...(prev || {}), definition: e.target.value }))}
+                                rows={5}
+                                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none resize-none transition-colors"
+                                placeholder="Definition des Prozesses..."
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-slate-400 uppercase mb-2">Beschreibung</label>
+                              <textarea
+                                value={steckbriefDraft?.beschreibung || ''}
+                                onChange={(e) => setSteckbriefDraft(prev => ({ ...(prev || {}), beschreibung: e.target.value }))}
+                                rows={8}
+                                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm focus:border-blue-500 focus:outline-none resize-none transition-colors"
+                                placeholder="Beschreibung des Prozesses..."
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer: Finalisieren-Button im Review-Modus */}
+                      {isReviewing && (
+                        <div className="p-4 border-t border-slate-800 bg-slate-900 rounded-b-xl shrink-0 flex justify-end">
+                          <button onClick={handleFinalizeSteckbrief} className="flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-500 text-white font-medium rounded-lg shadow-lg shadow-green-900/20 transition-all text-sm"><Save size={16} /> Finalisieren &amp; Speichern</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
               
               {activeTab === 'archive' && (
